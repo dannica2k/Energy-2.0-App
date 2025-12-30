@@ -16,8 +16,8 @@ class GitHubApiService(private val client: OkHttpClient) {
         private const val GITHUB_API_BASE = "https://api.github.com"
         private const val REPO_OWNER = "dannica2k"
         private const val REPO_NAME = "Energy-2.0-App"
-        // GitHub Personal Access Token for private repo access
-        private const val GITHUB_TOKEN = "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"
+        // GitHub Fine-Grained Personal Access Token (read-only access to releases)
+        private const val GITHUB_TOKEN = "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"
     }
     
     suspend fun getLatestRelease(): Result<GitHubRelease> = withContext(Dispatchers.IO) {
