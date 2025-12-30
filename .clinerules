@@ -1,0 +1,211 @@
+# Energy20 Android App - Project Intelligence
+
+## Project Overview
+Energy monitoring Android application that displays consumption data from a PHP/MySQL backend and enables device configuration management.
+
+## Critical Implementation Paths
+
+### HTML Parsing Pattern - CURRENT APPROACH
+**User Decision**: Use existing PHP pages WITHOUT modification. Extract JSON from HTML.
+
+The backend already embeds JSON data in HTML for JavaScript charts:
+1. Fetch HTML page: `http://energy.webmenow.ca/daily_consumption.php?date_start=X&date_end=Y`
+2. Parse HTML to locate `<script>` tag containing: `const dailyData = <?= $daily_data_json ?>;`
+3. Extract JSON string using regex or Jsoup
+4. Parse JSON with Gson
+5. Map to Kotlin data classes
+
+**Implementation Pattern**:
+```kotlin
+// 1. Fetch HTML
+val html = okHttpClient.newCall(request).execute().body?.string()
+
+// 2. Parse with Jsoup
+val doc = Jsoup.parse(html)
+val scripts = doc.select("script")
+
+// 3. Find dailyData variable
+val regex = Regex("const dailyData = (\\{.*?\\});", RegexOption.DOT_MATCHES_ALL)
+val match = regex.find(scriptContent)
+val jsonString = match?.groupValues?.get(1)
+
+// 4. Parse JSON
+val energyData = gson.fromJson(jsonString, DeviceEnergyData::class.java)
+```
+
+**Future Optimization**: Add `?api=true` parameter to PHP for pure JSON responses
+
+### Network Security for HTTP
+Android 9+ blocks cleartext HTTP by default. Must add network security config:
+```xml
+<!-- res/xml/network_security_config.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">energy.webmenow.ca</domain>
+    </domain-config>
+</network-security-config>
+```
+
+Reference in AndroidManifest.xml:
+```xml
+<application
+    android:networkSecurityConfig="@xml/network_security_config"
+    ...>
+```
+
+### Data Model Alignment
+PHP embeds JSON in HTML with this exact structure:
+```javascript
+const dailyData = {
+  "device_1_1": {
+    "name": "Main Circuit",
+    "data": {
+      "2024-01-01": 12.5,
+      "2024-01-02": 13.2
+    }
+  }
+};
+```
+
+**Kotlin Data Models**:
+```kotlin
+// Top-level: Map of device keys to DeviceInfo
+typealias DeviceEnergyData = Map<String, DeviceInfo>
+
+data class DeviceInfo(
+    val name: String,
+    val data: Map<String, Double>  // Date to kWh
+)
+```
+
+**Parsing Strategy**:
+- Use Gson with TypeToken for Map deserialization
+- Device key format: `"${device_id}_${circuit_id}"`
+- Date format: "YYYY-MM-DD"
+- Energy values: Double (kWh)
+
+## User Preferences & Workflow
+
+### Development Approach
+- Prefer incremental implementation with testing at each step
+- **NO PHP modifications** - use existing pages as-is
+- Parse HTML to extract JSON data
+- Test HTML fetching and parsing before UI integration
+- Use logging extensively during development
+
+### Code Organization
+- Follow MVVM architecture strictly
+- Keep ViewModels free of Android framework dependencies
+- Use Repository pattern for all data access
+- Separate network models from UI models if needed
+- Create dedicated HTML parsing utility class
+
+## Project-Specific Patterns
+
+### Date Handling
+- Backend uses `LocalTS` (DATE type in MySQL)
+- Default range: Last 7 days
+- Format: YYYY-MM-DD
+- Always validate date ranges before API calls
+
+### Device Identification
+- Devices identified by composite key: `device_id` + `circuit_id`
+- Display name from `device_settings.device_name`
+- Fallback: "device_id Circuit circuit_id"
+- Timezone stored per device in `device_settings.timezone_id`
+
+### Chart Configuration
+- Use 6-color palette (matching web version)
+- Line charts with multiple datasets
+- One dataset per device/circuit combination
+- X-axis: Dates (formatted as "MMM dd")
+- Y-axis: kWh values (start at 0)
+
+### HTML Parsing Strategy
+- Use Jsoup for HTML parsing (robust, handles malformed HTML)
+- Use Regex for JSON extraction from script tags
+- Pattern: `const dailyData = ({.*?});`
+- Validate JSON before parsing with Gson
+- Handle cases where JSON might not be present
+
+## Known Challenges & Solutions
+
+### Challenge: HTTP Backend
+**Issue**: Modern Android requires HTTPS
+**Solution**: Network security config allows HTTP for specific domain
+**Future**: Migrate backend to HTTPS
+
+### Challenge: No Authentication
+**Issue**: API endpoints are public
+**Solution**: Acceptable for MVP, add auth in future
+**Mitigation**: Consider IP whitelisting on server
+
+### Challenge: Timezone Handling
+**Issue**: Energy data has local timestamps, devices in different timezones
+**Solution**: 
+- Store timezone_id in device_settings
+- Display times in device's configured timezone
+- Handle conversions in ViewModel layer
+
+### Challenge: Parsing JSON from HTML
+**Issue**: JSON embedded in JavaScript, not pure API response
+**Solution**:
+- Use Jsoup to parse HTML structure
+- Regex to extract JSON from script content
+- Gson to parse extracted JSON string
+- Comprehensive error handling for each step
+
+## Tool Usage Patterns
+
+### Gradle Dependencies - REVISED
+Always use explicit versions. Key dependencies:
+- OkHttp: 4.12.0 (HTTP client)
+- Gson: 2.10.1 (JSON parsing)
+- Jsoup: 1.17.1 (HTML parsing)
+- MPAndroidChart: 3.1.0 (Charts)
+- Coroutines: 1.7.3+ (Async operations)
+
+### Testing Strategy
+1. Unit test HTML parsing logic with sample HTML
+2. Unit test JSON extraction with various patterns
+3. Unit test ViewModels and Repositories
+4. Mock HTML responses for testing
+5. Manual testing on physical device for charts
+6. Test with various date ranges and device counts
+
+## Evolution of Project Decisions
+
+### Initial Architecture Decision
+**Date**: 2024-12-29
+**Decision**: MVVM with Repository pattern
+**Reason**: Android best practice, testable, lifecycle-aware
+**Status**: Active
+
+### API Design Decision - REVISED
+**Date**: 2024-12-29 (Updated)
+**Decision**: Parse JSON from existing HTML pages (no PHP changes)
+**Reason**: User preference to avoid backend modifications initially
+**Previous Plan**: Extend PHP with API mode
+**Current Approach**: Extract JSON embedded in `<script>` tags
+**Status**: Active
+**Future**: Can optimize with dedicated API endpoints later
+
+### Chart Library Decision
+**Date**: 2024-12-29
+**Decision**: MPAndroidChart
+**Reason**: Most popular, well-documented, actively maintained
+**Status**: Active
+
+### HTML Parsing Library Decision
+**Date**: 2024-12-29
+**Decision**: Jsoup for HTML parsing
+**Reason**: Robust, handles malformed HTML, easy to use
+**Status**: Active
+
+## Memory Bank Notes
+- All project context stored in `memory-bank/` directory
+- Read all memory bank files at start of each session
+- Update `activeContext.md` and `progress.md` as work progresses
+- Document new patterns and decisions in this file
+- **Key Change**: Approach revised to parse existing HTML instead of modifying PHP
