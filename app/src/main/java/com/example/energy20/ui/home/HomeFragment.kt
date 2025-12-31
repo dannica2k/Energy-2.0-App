@@ -8,8 +8,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.energy20.R
 import com.example.energy20.data.DeviceEnergyData
+import com.example.energy20.data.DailyTemperature
 import com.example.energy20.databinding.FragmentHomeBinding
 import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
@@ -39,6 +41,12 @@ class HomeFragment : Fragment() {
         Color.parseColor("#10b981"), // Green
         Color.parseColor("#06b6d4")  // Cyan
     )
+    
+    // Temperature color (distinct from energy colors)
+    private val temperatureColor = Color.parseColor("#ff6b6b") // Warm red for temperature
+    
+    // Store weather data for chart updates
+    private var currentWeatherData: List<DailyTemperature>? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -208,8 +216,19 @@ class HomeFragment : Fragment() {
             } else {
                 binding.emptyText.visibility = View.GONE
                 binding.energyChart.visibility = View.VISIBLE
-                updateChart(data)
+                updateChart(data, currentWeatherData)
                 updateOccupiedDaysStats(data)
+            }
+        }
+        
+        // Observe weather data
+        viewModel.weatherData.observe(viewLifecycleOwner) { weatherData ->
+            currentWeatherData = weatherData
+            // Re-render chart if we already have energy data
+            viewModel.energyData.value?.let { energyData ->
+                if (energyData.isNotEmpty()) {
+                    updateChart(energyData, weatherData)
+                }
             }
         }
     }
@@ -256,16 +275,22 @@ class HomeFragment : Fragment() {
                 textColor = Color.GRAY
             }
             
-            // Configure left Y axis
+            // Configure left Y axis (Energy - kWh)
             axisLeft.apply {
                 setDrawGridLines(true)
                 gridColor = Color.LTGRAY
                 textColor = Color.GRAY
                 axisMinimum = 0f
+                setPosition(YAxis.YAxisLabelPosition.OUTSIDE_CHART)
             }
             
-            // Disable right Y axis
-            axisRight.isEnabled = false
+            // Configure right Y axis (Temperature - °C)
+            axisRight.apply {
+                isEnabled = true
+                setDrawGridLines(false)
+                textColor = temperatureColor
+                setPosition(YAxis.YAxisLabelPosition.OUTSIDE_CHART)
+            }
             
             // Configure legend
             legend.apply {
@@ -276,7 +301,7 @@ class HomeFragment : Fragment() {
         }
     }
     
-    private fun updateChart(data: DeviceEnergyData) {
+    private fun updateChart(data: DeviceEnergyData, weatherData: List<DailyTemperature>? = null) {
         // Collect all unique dates and sort them
         val allDates = mutableSetOf<String>()
         data.values.forEach { deviceInfo ->
@@ -290,7 +315,7 @@ class HomeFragment : Fragment() {
             return
         }
         
-        // Create datasets for each device
+        // Create datasets for each device (energy data)
         val dataSets = mutableListOf<LineDataSet>()
         var colorIndex = 0
         
@@ -304,7 +329,8 @@ class HomeFragment : Fragment() {
             
             val dataSet = LineDataSet(entries, deviceInfo.name).apply {
                 color = colorPalette[colorIndex % colorPalette.size]
-                setCircleColor(colorPalette[colorIndex % colorPalette.size])
+                setCircleColor(colorPalette[colorIndex % colorPalette.size]
+)
                 lineWidth = 2.5f
                 circleRadius = 4f
                 setDrawCircleHole(false)
@@ -312,10 +338,42 @@ class HomeFragment : Fragment() {
                 setDrawValues(false)
                 mode = LineDataSet.Mode.CUBIC_BEZIER
                 cubicIntensity = 0.2f
+                axisDependency = YAxis.AxisDependency.LEFT // Energy uses left axis
             }
             
             dataSets.add(dataSet)
             colorIndex++
+        }
+        
+        // Add temperature dataset if available
+        weatherData?.let { temps ->
+            val tempEntries = mutableListOf<Entry>()
+            
+            sortedDates.forEachIndexed { index, date ->
+                // Find matching temperature data
+                val temp = temps.find { it.date == date }
+                temp?.let {
+                    tempEntries.add(Entry(index.toFloat(), it.avgTemp.toFloat()))
+                }
+            }
+            
+            if (tempEntries.isNotEmpty()) {
+                val tempDataSet = LineDataSet(tempEntries, "Temperature (°C)").apply {
+                    color = temperatureColor
+                    setCircleColor(temperatureColor)
+                    lineWidth = 2.5f
+                    circleRadius = 4f
+                    setDrawCircleHole(false)
+                    valueTextSize = 9f
+                    setDrawValues(false)
+                    mode = LineDataSet.Mode.CUBIC_BEZIER
+                    cubicIntensity = 0.2f
+                    axisDependency = YAxis.AxisDependency.RIGHT // Temperature uses right axis
+                    enableDashedLine(10f, 5f, 0f) // Dashed line to distinguish from energy
+                }
+                
+                dataSets.add(tempDataSet)
+            }
         }
         
         // Format dates for X axis labels

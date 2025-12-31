@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.energy20.data.DeviceEnergyData
 import com.example.energy20.data.DeviceUsageResponse
+import com.example.energy20.data.DailyTemperature
 import com.example.energy20.repository.EnergyRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -27,6 +28,9 @@ class HomeViewModel : ViewModel() {
     private val _deviceUsage = MutableLiveData<DeviceUsageResponse>()
     val deviceUsage: LiveData<DeviceUsageResponse> = _deviceUsage
     
+    private val _weatherData = MutableLiveData<List<DailyTemperature>>()
+    val weatherData: LiveData<List<DailyTemperature>> = _weatherData
+    
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     
     init {
@@ -39,6 +43,7 @@ class HomeViewModel : ViewModel() {
     /**
      * Loads energy data for the specified date range
      * If no dates provided, uses last 7 days
+     * Also loads weather data for the same date range
      */
     fun loadEnergyData(startDate: String? = null, endDate: String? = null) {
         viewModelScope.launch {
@@ -52,12 +57,23 @@ class HomeViewModel : ViewModel() {
                 calendar.add(Calendar.DAY_OF_YEAR, -7)
                 val start = startDate ?: dateFormat.format(calendar.time)
                 
-                val result = repository.getDailyEnergyData(start, end)
+                // Load energy data
+                val energyResult = repository.getDailyEnergyData(start, end)
                 
-                result.onSuccess { data ->
+                energyResult.onSuccess { data ->
                     _energyData.value = data
                 }.onFailure { error ->
                     _errorMessage.value = error.message ?: "Failed to load energy data"
+                }
+                
+                // Load weather data for the same date range
+                val weatherResult = repository.getWeatherData(start, end)
+                
+                weatherResult.onSuccess { data ->
+                    _weatherData.value = data
+                }.onFailure { error ->
+                    // Don't show error for weather data - it's supplementary
+                    // Just log it silently
                 }
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "An error occurred"

@@ -3,18 +3,22 @@ package com.example.energy20.repository
 import com.example.energy20.data.DeviceEnergyData
 import com.example.energy20.data.DeviceInfo
 import com.example.energy20.data.DeviceUsageResponse
+import com.example.energy20.data.DailyTemperature
 import com.example.energy20.network.EnergyApiService
+import com.example.energy20.network.WeatherApiService
 import com.example.energy20.utils.HtmlJsonExtractor
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 /**
- * Repository for accessing energy consumption data
+ * Repository for accessing energy consumption and weather data
  */
 class EnergyRepository(
-    private val apiService: EnergyApiService = EnergyApiService.getInstance()
+    private val apiService: EnergyApiService = EnergyApiService.getInstance(),
+    private val weatherApiService: WeatherApiService = WeatherApiService(OkHttpClient())
 ) {
     
     private val gson = Gson()
@@ -65,6 +69,33 @@ class EnergyRepository(
             val data: DeviceUsageResponse = gson.fromJson(jsonString, DeviceUsageResponse::class.java)
             
             Result.success(data)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Fetches weather data for the specified date range
+     * Currently hardcoded to Paphos, Cyprus location
+     * 
+     * @param startDate Date in YYYY-MM-DD format
+     * @param endDate Date in YYYY-MM-DD format
+     * @return Result containing list of DailyTemperature or error
+     */
+    suspend fun getWeatherData(
+        startDate: String,
+        endDate: String
+    ): Result<List<DailyTemperature>> = withContext(Dispatchers.IO) {
+        try {
+            val result = weatherApiService.getHistoricalWeather(startDate, endDate)
+            
+            if (result.isSuccess) {
+                val weatherData = result.getOrNull()!!
+                val temperatures = DailyTemperature.fromWeatherData(weatherData)
+                Result.success(temperatures)
+            } else {
+                Result.failure(result.exceptionOrNull() ?: Exception("Unknown error"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
