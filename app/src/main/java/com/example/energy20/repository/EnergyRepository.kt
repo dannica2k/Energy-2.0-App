@@ -84,10 +84,15 @@ class EnergyRepository(
      */
     suspend fun getWeatherData(
         startDate: String,
-        endDate: String
+        endDate: String,
+        latitude: Double = 34.77,
+        longitude: Double = 32.42,
+        useFahrenheit: Boolean = false
     ): Result<List<DailyTemperature>> = withContext(Dispatchers.IO) {
         try {
-            val result = weatherApiService.getHistoricalWeather(startDate, endDate)
+            val result = weatherApiService.getHistoricalWeather(
+                startDate, endDate, latitude, longitude, useFahrenheit
+            )
             
             if (result.isSuccess) {
                 val weatherData = result.getOrNull()!!

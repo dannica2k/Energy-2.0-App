@@ -10,6 +10,7 @@ import com.example.energy20.R
 import com.example.energy20.data.DeviceEnergyData
 import com.example.energy20.data.DailyTemperature
 import com.example.energy20.databinding.FragmentHomeBinding
+import com.example.energy20.ui.settings.SettingsFragment
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
@@ -53,7 +54,10 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        viewModel = ViewModelProvider(this)[HomeViewModel::class.java]
+        viewModel = ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().application)
+        )[HomeViewModel::class.java]
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         
         setHasOptionsMenu(true)
@@ -290,6 +294,8 @@ class HomeFragment : Fragment() {
                 setDrawGridLines(false)
                 textColor = temperatureColor
                 setPosition(YAxis.YAxisLabelPosition.OUTSIDE_CHART)
+                axisMinimum = 0f
+                axisMaximum = 40f // Default temperature range 0-40°C
             }
             
             // Configure legend
@@ -358,7 +364,18 @@ class HomeFragment : Fragment() {
             }
             
             if (tempEntries.isNotEmpty()) {
-                val tempDataSet = LineDataSet(tempEntries, "Temperature (°C)").apply {
+                // Get temperature unit from settings
+                val isCelsius = SettingsFragment.isCelsius(requireContext())
+                val tempUnit = if (isCelsius) "°C" else "°F"
+                val tempLabel = "Temperature ($tempUnit)"
+                
+                // Adjust Y-axis range based on unit
+                val minTemp = tempEntries.minOfOrNull { it.y } ?: 0f
+                val maxTemp = tempEntries.maxOfOrNull { it.y } ?: 40f
+                binding.energyChart.axisRight.axisMinimum = (minTemp - 5).coerceAtLeast(if (isCelsius) -10f else 10f)
+                binding.energyChart.axisRight.axisMaximum = (maxTemp + 5).coerceAtMost(if (isCelsius) 50f else 120f)
+                
+                val tempDataSet = LineDataSet(tempEntries, tempLabel).apply {
                     color = temperatureColor
                     setCircleColor(temperatureColor)
                     lineWidth = 2.5f

@@ -17,7 +17,15 @@ class SettingsFragment : Fragment() {
     companion object {
         private const val PREFS_NAME = "energy_settings"
         private const val KEY_OCCUPIED_THRESHOLD = "occupied_threshold"
+        private const val KEY_LATITUDE = "weather_latitude"
+        private const val KEY_LONGITUDE = "weather_longitude"
+        private const val KEY_TEMP_UNIT = "temperature_unit"
+        
         private const val DEFAULT_THRESHOLD = 1.0
+        private const val DEFAULT_LATITUDE = 34.77 // Paphos, Cyprus
+        private const val DEFAULT_LONGITUDE = 32.42
+        private const val TEMP_UNIT_CELSIUS = "celsius"
+        private const val TEMP_UNIT_FAHRENHEIT = "fahrenheit"
         
         fun getOccupiedThreshold(context: Context): Double {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -27,6 +35,35 @@ class SettingsFragment : Fragment() {
         fun setOccupiedThreshold(context: Context, threshold: Double) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit().putFloat(KEY_OCCUPIED_THRESHOLD, threshold.toFloat()).apply()
+        }
+        
+        fun getLatitude(context: Context): Double {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            return prefs.getFloat(KEY_LATITUDE, DEFAULT_LATITUDE.toFloat()).toDouble()
+        }
+        
+        fun getLongitude(context: Context): Double {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            return prefs.getFloat(KEY_LONGITUDE, DEFAULT_LONGITUDE.toFloat()).toDouble()
+        }
+        
+        fun setLocation(context: Context, latitude: Double, longitude: Double) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit()
+                .putFloat(KEY_LATITUDE, latitude.toFloat())
+                .putFloat(KEY_LONGITUDE, longitude.toFloat())
+                .apply()
+        }
+        
+        fun isCelsius(context: Context): Boolean {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            return prefs.getString(KEY_TEMP_UNIT, TEMP_UNIT_CELSIUS) == TEMP_UNIT_CELSIUS
+        }
+        
+        fun setTemperatureUnit(context: Context, isCelsius: Boolean) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val unit = if (isCelsius) TEMP_UNIT_CELSIUS else TEMP_UNIT_FAHRENHEIT
+            prefs.edit().putString(KEY_TEMP_UNIT, unit).apply()
         }
     }
 
@@ -47,12 +84,31 @@ class SettingsFragment : Fragment() {
         binding.saveButton.setOnClickListener {
             saveSettings()
         }
+        
+        binding.saveWeatherButton.setOnClickListener {
+            saveWeatherSettings()
+        }
     }
     
     private fun loadSettings() {
+        // Load occupancy threshold
         val threshold = getOccupiedThreshold(requireContext())
         binding.thresholdInput.setText(threshold.toString())
         binding.currentValueText.text = "Current: $threshold kWh"
+        
+        // Load weather settings
+        val latitude = getLatitude(requireContext())
+        val longitude = getLongitude(requireContext())
+        binding.latitudeInput.setText(latitude.toString())
+        binding.longitudeInput.setText(longitude.toString())
+        
+        // Load temperature unit
+        val isCelsius = isCelsius(requireContext())
+        if (isCelsius) {
+            binding.celsiusRadio.isChecked = true
+        } else {
+            binding.fahrenheitRadio.isChecked = true
+        }
     }
     
     private fun saveSettings() {
@@ -84,6 +140,50 @@ class SettingsFragment : Fragment() {
             
         } catch (e: NumberFormatException) {
             Snackbar.make(binding.root, "Please enter a valid number", Snackbar.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun saveWeatherSettings() {
+        val latText = binding.latitudeInput.text.toString()
+        val lonText = binding.longitudeInput.text.toString()
+        
+        if (latText.isEmpty() || lonText.isEmpty()) {
+            Snackbar.make(binding.root, "Please enter both latitude and longitude", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        
+        try {
+            val latitude = latText.toDouble()
+            val longitude = lonText.toDouble()
+            
+            // Validate coordinates
+            if (latitude < -90 || latitude > 90) {
+                Snackbar.make(binding.root, "Latitude must be between -90 and 90", Snackbar.LENGTH_SHORT).show()
+                return
+            }
+            
+            if (longitude < -180 || longitude > 180) {
+                Snackbar.make(binding.root, "Longitude must be between -180 and 180", Snackbar.LENGTH_SHORT).show()
+                return
+            }
+            
+            // Save location
+            setLocation(requireContext(), latitude, longitude)
+            
+            // Save temperature unit
+            val isCelsius = binding.celsiusRadio.isChecked
+            setTemperatureUnit(requireContext(), isCelsius)
+            
+            // Show success message
+            binding.successText.visibility = View.VISIBLE
+            binding.successText.postDelayed({
+                binding.successText.visibility = View.GONE
+            }, 3000)
+            
+            Snackbar.make(binding.root, "Weather settings saved! Reload data to see changes.", Snackbar.LENGTH_LONG).show()
+            
+        } catch (e: NumberFormatException) {
+            Snackbar.make(binding.root, "Please enter valid coordinates", Snackbar.LENGTH_SHORT).show()
         }
     }
 

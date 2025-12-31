@@ -33,15 +33,18 @@ class WeatherApiService(private val client: OkHttpClient) {
         startDate: String,
         endDate: String,
         latitude: Double = PAPHOS_LATITUDE,
-        longitude: Double = PAPHOS_LONGITUDE
+        longitude: Double = PAPHOS_LONGITUDE,
+        useFahrenheit: Boolean = false
     ): Result<WeatherData> = withContext(Dispatchers.IO) {
         try {
             // Build URL with query parameters
+            val tempUnit = if (useFahrenheit) "fahrenheit" else "celsius"
             val url = buildString {
                 append("$BASE_URL/forecast")
                 append("?latitude=$latitude")
                 append("&longitude=$longitude")
                 append("&daily=temperature_2m_max,temperature_2m_min")
+                append("&temperature_unit=$tempUnit")
                 append("&start_date=$startDate")
                 append("&end_date=$endDate")
                 append("&timezone=auto")

@@ -172,7 +172,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="24dp"
-            android:text="© 2024 Energy20"
+            android:text="© 2024 Energy 2.0 webmenow.ca"
             android:textSize="12sp"
             android:textColor="?android:attr/textColorSecondary"
             app:layout_constraintBottom_toBottomOf="parent"

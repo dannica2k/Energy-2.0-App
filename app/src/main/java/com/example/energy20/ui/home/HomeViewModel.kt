@@ -8,13 +8,17 @@ import com.example.energy20.data.DeviceEnergyData
 import com.example.energy20.data.DeviceUsageResponse
 import com.example.energy20.data.DailyTemperature
 import com.example.energy20.repository.EnergyRepository
+import com.example.energy20.ui.settings.SettingsFragment
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = EnergyRepository()
+    private val context = application.applicationContext
     
     private val _energyData = MutableLiveData<DeviceEnergyData>()
     val energyData: LiveData<DeviceEnergyData> = _energyData
@@ -66,8 +70,12 @@ class HomeViewModel : ViewModel() {
                     _errorMessage.value = error.message ?: "Failed to load energy data"
                 }
                 
-                // Load weather data for the same date range
-                val weatherResult = repository.getWeatherData(start, end)
+                // Load weather data for the same date range with settings
+                val latitude = SettingsFragment.getLatitude(context)
+                val longitude = SettingsFragment.getLongitude(context)
+                val useFahrenheit = !SettingsFragment.isCelsius(context)
+                
+                val weatherResult = repository.getWeatherData(start, end, latitude, longitude, useFahrenheit)
                 
                 weatherResult.onSuccess { data ->
                     _weatherData.value = data
