@@ -1,15 +1,21 @@
 package com.example.energy20.utils
 
 import android.app.DownloadManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.Settings
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import com.example.energy20.BuildConfig
 import com.example.energy20.data.GitHubRelease
@@ -25,6 +31,8 @@ class UpdateManager(private val context: Context) {
     private var downloadId: Long = -1
     
     companion object {
+        private const val NOTIFICATION_CHANNEL_ID = "update_channel"
+        private const val INSTALL_NOTIFICATION_ID = 1001
         private const val TAG = "UpdateManager"
         private const val PREFS_NAME = "update_prefs"
         private const val KEY_LAST_CHECK = "last_check_time"
@@ -294,32 +302,135 @@ class UpdateManager(private val context: Context) {
         Log.d(TAG, "Attempting to install APK from: ${file.absolutePath}")
         Log.d(TAG, "File exists: ${file.exists()}, Size: ${file.length()} bytes")
         
-        if (file.exists() && file.length() > 0) {
-            try {
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        // For Android 7.0+, use FileProvider
-                        val apkUri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            file
-                        )
-                        Log.d(TAG, "FileProvider URI: $apkUri")
-                        setDataAndType(apkUri, "application/vnd.android.package-archive")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    } else {
-                        setDataAndType(Uri.fromFile(file), "application/vnd.android.package-archive")
-                    }
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (!file.exists() || file.length() == 0L) {
+            Log.e(TAG, "APK file not found or empty")
+            return
+        }
+        
+        // Check if we can install packages
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                Log.w(TAG, "App cannot install packages - showing notification to request permission")
+                showInstallPermissionNotification(context, file)
+                return
+            }
+        }
+        
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    // For Android 7.0+, use FileProvider
+                    val apkUri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file
+                    )
+                    Log.d(TAG, "FileProvider URI: $apkUri")
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } else {
+                    setDataAndType(Uri.fromFile(file), "application/vnd.android.package-archive")
                 }
-                
-                context.startActivity(intent)
-                Log.d(TAG, "Install intent launched successfully")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error launching install intent", e)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            
+            context.startActivity(intent)
+            Log.d(TAG, "Install intent launched successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error launching install intent", e)
+            // Show notification as fallback
+            showInstallNotification(context, file)
+        }
+    }
+    
+    private fun showInstallPermissionNotification(context: Context, file: File) {
+        createNotificationChannel(context)
+        
+        // Intent to open install permission settings
+        val settingsIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         } else {
-            Log.e(TAG, "APK file not found or empty")
+            Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            settingsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle("Update Downloaded")
+            .setContentText("Tap to allow installation from this source")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+        
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(INSTALL_NOTIFICATION_ID, notification)
+    }
+    
+    private fun showInstallNotification(context: Context, file: File) {
+        createNotificationChannel(context)
+        
+        val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+        } else {
+            Uri.fromFile(file)
+        }
+        
+        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            installIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle("Update Ready")
+            .setContentText("Tap to install Energy20 update")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+        
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(INSTALL_NOTIFICATION_ID, notification)
+    }
+    
+    private fun createNotificationChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "App Updates",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications for app updates"
+            }
+            
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
     
