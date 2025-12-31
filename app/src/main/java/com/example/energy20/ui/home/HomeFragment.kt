@@ -374,13 +374,16 @@ class HomeFragment : Fragment() {
             val tempEntries = mutableListOf<Entry>()
             
             sortedDates.forEachIndexed { index, date ->
+                // Normalize date to YYYY-MM-DD format for matching
+                val normalizedDate = date.split(" ")[0]  // Remove time portion if present
+                
                 // Find matching temperature data
-                val temp = temps.find { it.date == date }
+                val temp = temps.find { it.date == normalizedDate }
                 if (temp != null) {
-                    Log.d("HomeFragment", "Match found for $date: ${temp.avgTemp}°")
+                    Log.d("HomeFragment", "Match found for $date (normalized: $normalizedDate): ${temp.avgTemp}°")
                     tempEntries.add(Entry(index.toFloat(), temp.avgTemp.toFloat()))
                 } else {
-                    Log.d("HomeFragment", "No temperature data for $date")
+                    Log.d("HomeFragment", "No temperature data for $date (normalized: $normalizedDate)")
                 }
             }
             
