@@ -127,8 +127,55 @@ class AboutFragment : Fragment() {
         binding.updateStatusText.text = "Downloading update..."
         binding.updateStatusText.visibility = View.VISIBLE
         binding.updateProgressBar.visibility = View.VISIBLE
+        binding.checkUpdateButton.isEnabled = false
         
-        updateManager.downloadAndInstallUpdate(downloadUrl)
+        updateManager.downloadAndInstallUpdate(downloadUrl) { status ->
+            requireActivity().runOnUiThread {
+                when (status) {
+                    is com.example.energy20.utils.DownloadStatus.Success -> {
+                        binding.updateProgressBar.visibility = View.GONE
+                        binding.updateStatusText.text = "Download complete! Installing..."
+                        binding.updateStatusText.postDelayed({
+                            binding.updateStatusText.visibility = View.GONE
+                            binding.checkUpdateButton.isEnabled = true
+                        }, 3000)
+                    }
+                    is com.example.energy20.utils.DownloadStatus.Failed -> {
+                        binding.updateProgressBar.visibility = View.GONE
+                        binding.updateStatusText.text = "Download failed: ${status.reason}"
+                        binding.checkUpdateButton.isEnabled = true
+                        
+                        Snackbar.make(
+                            binding.root,
+                            "Download failed: ${status.reason}",
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                        
+                        binding.updateStatusText.postDelayed({
+                            binding.updateStatusText.visibility = View.GONE
+                        }, 5000)
+                    }
+                    is com.example.energy20.utils.DownloadStatus.Running -> {
+                        binding.updateStatusText.text = "Downloading: ${status.progress}%"
+                    }
+                    is com.example.energy20.utils.DownloadStatus.Pending -> {
+                        binding.updateStatusText.text = "Download pending..."
+                    }
+                    is com.example.energy20.utils.DownloadStatus.Paused -> {
+                        binding.updateStatusText.text = "Download paused: ${status.reason}"
+                    }
+                    is com.example.energy20.utils.DownloadStatus.Unknown -> {
+                        binding.updateProgressBar.visibility = View.GONE
+                        binding.updateStatusText.text = "Download status unknown: ${status.message}"
+                        binding.checkUpdateButton.isEnabled = true
+                        
+                        binding.updateStatusText.postDelayed({
+                            binding.updateStatusText.visibility = View.GONE
+                        }, 5000)
+                    }
+                }
+            }
+        }
         
         Snackbar.make(
             binding.root,
