@@ -12,6 +12,7 @@ import com.example.energy20.ui.settings.SettingsFragment
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.launch
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -75,13 +76,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 val longitude = SettingsFragment.getLongitude(context)
                 val useFahrenheit = !SettingsFragment.isCelsius(context)
                 
+                Log.d("HomeViewModel", "=== WEATHER DATA REQUEST ===")
+                Log.d("HomeViewModel", "Date range: $start to $end")
+                Log.d("HomeViewModel", "Latitude: $latitude, Longitude: $longitude")
+                Log.d("HomeViewModel", "Use Fahrenheit: $useFahrenheit")
+                
                 val weatherResult = repository.getWeatherData(start, end, latitude, longitude, useFahrenheit)
                 
                 weatherResult.onSuccess { data ->
+                    Log.d("HomeViewModel", "Weather data received: ${data.size} days")
+                    data.forEachIndexed { index, temp ->
+                        Log.d("HomeViewModel", "Day $index: ${temp.date} - Avg: ${temp.avgTemp}°, Min: ${temp.minTemp}°, Max: ${temp.maxTemp}°")
+                    }
                     _weatherData.value = data
                 }.onFailure { error ->
-                    // Don't show error for weather data - it's supplementary
-                    // Just log it silently
+                    Log.e("HomeViewModel", "Weather data failed: ${error.message}", error)
+                    _errorMessage.value = "Weather: ${error.message}"
                 }
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "An error occurred"

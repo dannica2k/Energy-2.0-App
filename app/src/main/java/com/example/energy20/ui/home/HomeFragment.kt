@@ -17,6 +17,7 @@ import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -227,7 +228,20 @@ class HomeFragment : Fragment() {
         
         // Observe weather data
         viewModel.weatherData.observe(viewLifecycleOwner) { weatherData ->
+            Log.d("HomeFragment", "=== WEATHER DATA OBSERVER ===")
+            Log.d("HomeFragment", "Weather data received: ${weatherData?.size ?: 0} days")
+            
             currentWeatherData = weatherData
+            
+            // Update debug info
+            if (weatherData.isNullOrEmpty()) {
+                Log.w("HomeFragment", "No weather data available")
+            } else {
+                weatherData.forEach { temp ->
+                    Log.d("HomeFragment", "Weather: ${temp.date} - ${temp.avgTemp}°")
+                }
+            }
+            
             // Re-render chart if we already have energy data
             viewModel.energyData.value?.let { energyData ->
                 if (energyData.isNotEmpty()) {
@@ -352,16 +366,25 @@ class HomeFragment : Fragment() {
         }
         
         // Add temperature dataset if available
+        Log.d("HomeFragment", "=== ADDING TEMPERATURE TO CHART ===")
+        Log.d("HomeFragment", "Weather data available: ${weatherData != null}")
+        Log.d("HomeFragment", "Weather data size: ${weatherData?.size ?: 0}")
+        
         weatherData?.let { temps ->
             val tempEntries = mutableListOf<Entry>()
             
             sortedDates.forEachIndexed { index, date ->
                 // Find matching temperature data
                 val temp = temps.find { it.date == date }
-                temp?.let {
-                    tempEntries.add(Entry(index.toFloat(), it.avgTemp.toFloat()))
+                if (temp != null) {
+                    Log.d("HomeFragment", "Match found for $date: ${temp.avgTemp}°")
+                    tempEntries.add(Entry(index.toFloat(), temp.avgTemp.toFloat()))
+                } else {
+                    Log.d("HomeFragment", "No temperature data for $date")
                 }
             }
+            
+            Log.d("HomeFragment", "Temperature entries created: ${tempEntries.size}")
             
             if (tempEntries.isNotEmpty()) {
                 // Get temperature unit from settings
