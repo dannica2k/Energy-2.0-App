@@ -66,14 +66,26 @@ class UpdateManager(private val context: Context) {
             
             val release = result.getOrNull() ?: return@withContext UpdateCheckResult.Error("No release found")
             
+            Log.d(TAG, "=== GITHUB RELEASE INFO ===")
+            Log.d(TAG, "Release tag: ${release.tagName}")
+            Log.d(TAG, "Release name: ${release.name}")
+            Log.d(TAG, "Number of assets: ${release.assets.size}")
+            release.assets.forEachIndexed { index, asset ->
+                Log.d(TAG, "Asset $index: ${asset.name} - ${asset.downloadUrl}")
+            }
+            
             // Find APK asset
             val apkAsset = release.assets.find { 
                 it.name.endsWith(".apk", ignoreCase = true) 
             }
             
             if (apkAsset == null) {
+                Log.e(TAG, "No APK found in release assets!")
                 return@withContext UpdateCheckResult.Error("No APK found in release")
             }
+            
+            Log.d(TAG, "Selected APK: ${apkAsset.name}")
+            Log.d(TAG, "Download URL: ${apkAsset.downloadUrl}")
             
             val currentVersion = BuildConfig.VERSION_NAME
             val latestVersion = release.tagName
@@ -105,7 +117,8 @@ class UpdateManager(private val context: Context) {
     fun downloadAndInstallUpdate(downloadUrl: String, onStatusChange: (DownloadStatus) -> Unit = {}): Long {
         val fileName = "Energy20_update.apk"
         
-        Log.d(TAG, "Starting download from: $downloadUrl")
+        Log.d(TAG, "=== DOWNLOAD ATTEMPT ===")
+        Log.d(TAG, "Download URL: $downloadUrl")
         
         // Use app-specific storage (no permissions required)
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
