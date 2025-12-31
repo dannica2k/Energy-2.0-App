@@ -101,11 +101,15 @@ class UpdateManager(private val context: Context) {
     
     fun downloadAndInstallUpdate(downloadUrl: String, onProgress: (Int) -> Unit = {}): Long {
         val fileName = "Energy20_update.apk"
+        
+        // Use app-specific storage (no permissions required)
+        val destination = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+        
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setTitle("Energy20 Update")
             setDescription("Downloading latest version...")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+            setDestinationUri(Uri.fromFile(destination))
             setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE)
         }
         
@@ -133,14 +137,13 @@ class UpdateManager(private val context: Context) {
     }
     
     private fun installApk(context: Context, downloadManager: DownloadManager, downloadId: Long) {
-        val uri = downloadManager.getUriForDownloadedFile(downloadId)
+        // Use app-specific storage location
+        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Energy20_update.apk")
         
-        if (uri != null) {
+        if (file.exists()) {
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     // For Android 7.0+, use FileProvider
-                    val file = File(Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS), "Energy20_update.apk")
                     val apkUri = FileProvider.getUriForFile(
                         context,
                         "${context.packageName}.fileprovider",
@@ -149,7 +152,7 @@ class UpdateManager(private val context: Context) {
                     setDataAndType(apkUri, "application/vnd.android.package-archive")
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 } else {
-                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    setDataAndType(Uri.fromFile(file), "application/vnd.android.package-archive")
                 }
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
