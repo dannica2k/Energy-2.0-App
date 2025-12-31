@@ -1,5 +1,7 @@
 package com.example.energy20.ui.about
 
+import android.app.DownloadManager
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +14,7 @@ import com.example.energy20.utils.UpdateCheckResult
 import com.example.energy20.utils.UpdateManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -22,6 +25,8 @@ class AboutFragment : Fragment() {
     private val binding get() = _binding!!
     
     private lateinit var updateManager: UpdateManager
+    private var currentDownloadId: Long = -1
+    private var isPolling = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -129,53 +134,14 @@ class AboutFragment : Fragment() {
         binding.updateProgressBar.visibility = View.VISIBLE
         binding.checkUpdateButton.isEnabled = false
         
-        updateManager.downloadAndInstallUpdate(downloadUrl) { status ->
+        currentDownloadId = updateManager.downloadAndInstallUpdate(downloadUrl) { status ->
             requireActivity().runOnUiThread {
-                when (status) {
-                    is com.example.energy20.utils.DownloadStatus.Success -> {
-                        binding.updateProgressBar.visibility = View.GONE
-                        binding.updateStatusText.text = "Download complete! Installing..."
-                        binding.updateStatusText.postDelayed({
-                            binding.updateStatusText.visibility = View.GONE
-                            binding.checkUpdateButton.isEnabled = true
-                        }, 3000)
-                    }
-                    is com.example.energy20.utils.DownloadStatus.Failed -> {
-                        binding.updateProgressBar.visibility = View.GONE
-                        binding.updateStatusText.text = "Download failed: ${status.reason}"
-                        binding.checkUpdateButton.isEnabled = true
-                        
-                        Snackbar.make(
-                            binding.root,
-                            "Download failed: ${status.reason}",
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                        
-                        binding.updateStatusText.postDelayed({
-                            binding.updateStatusText.visibility = View.GONE
-                        }, 5000)
-                    }
-                    is com.example.energy20.utils.DownloadStatus.Running -> {
-                        binding.updateStatusText.text = "Downloading: ${status.progress}%"
-                    }
-                    is com.example.energy20.utils.DownloadStatus.Pending -> {
-                        binding.updateStatusText.text = "Download pending..."
-                    }
-                    is com.example.energy20.utils.DownloadStatus.Paused -> {
-                        binding.updateStatusText.text = "Download paused: ${status.reason}"
-                    }
-                    is com.example.energy20.utils.DownloadStatus.Unknown -> {
-                        binding.updateProgressBar.visibility = View.GONE
-                        binding.updateStatusText.text = "Download status unknown: ${status.message}"
-                        binding.checkUpdateButton.isEnabled = true
-                        
-                        binding.updateStatusText.postDelayed({
-                            binding.updateStatusText.visibility = View.GONE
-                        }, 5000)
-                    }
-                }
+                handleDownloadStatus(status)
             }
         }
+        
+        // Start polling the download status
+        startPollingDownloadStatus()
         
         Snackbar.make(
             binding.root,
@@ -183,9 +149,90 @@ class AboutFragment : Fragment() {
             Snackbar.LENGTH_LONG
         ).show()
     }
+    
+    private fun startPollingDownloadStatus() {
+        if (isPolling) return
+        isPolling = true
+        
+        lifecycleScope.launch {
+            val downloadManager = requireContext().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            
+            while (isPolling && currentDownloadId != -1L) {
+                val status = updateManager.getDownloadStatus(downloadManager, currentDownloadId)
+                
+                requireActivity().runOnUiThread {
+                    handleDownloadStatus(status)
+                }
+                
+                // Stop polling if download is complete (success or failure)
+                when (status) {
+                    is com.example.energy20.utils.DownloadStatus.Success,
+                    is com.example.energy20.utils.DownloadStatus.Failed,
+                    is com.example.energy20.utils.DownloadStatus.Unknown -> {
+                        isPolling = false
+                    }
+                    else -> {
+                        // Continue polling
+                    }
+                }
+                
+                delay(1000) // Poll every second
+            }
+        }
+    }
+    
+    private fun handleDownloadStatus(status: com.example.energy20.utils.DownloadStatus) {
+        when (status) {
+            is com.example.energy20.utils.DownloadStatus.Success -> {
+                isPolling = false
+                binding.updateProgressBar.visibility = View.GONE
+                binding.updateStatusText.text = "Download complete! Installing..."
+                binding.updateStatusText.postDelayed({
+                    binding.updateStatusText.visibility = View.GONE
+                    binding.checkUpdateButton.isEnabled = true
+                }, 3000)
+            }
+            is com.example.energy20.utils.DownloadStatus.Failed -> {
+                isPolling = false
+                binding.updateProgressBar.visibility = View.GONE
+                binding.updateStatusText.text = "Download failed: ${status.reason}"
+                binding.checkUpdateButton.isEnabled = true
+                
+                Snackbar.make(
+                    binding.root,
+                    "Download failed: ${status.reason}",
+                    Snackbar.LENGTH_LONG
+                ).show()
+                
+                binding.updateStatusText.postDelayed({
+                    binding.updateStatusText.visibility = View.GONE
+                }, 5000)
+            }
+            is com.example.energy20.utils.DownloadStatus.Running -> {
+                binding.updateStatusText.text = "Downloading: ${status.progress}% (${status.bytesDownloaded / 1024}KB / ${status.bytesTotal / 1024}KB)"
+            }
+            is com.example.energy20.utils.DownloadStatus.Pending -> {
+                binding.updateStatusText.text = "Download pending..."
+            }
+            is com.example.energy20.utils.DownloadStatus.Paused -> {
+                binding.updateStatusText.text = "Download paused: ${status.reason}"
+            }
+            is com.example.energy20.utils.DownloadStatus.Unknown -> {
+                isPolling = false
+                binding.updateProgressBar.visibility = View.GONE
+                binding.updateStatusText.text = "Download status unknown: ${status.message}"
+                binding.checkUpdateButton.isEnabled = true
+                
+                binding.updateStatusText.postDelayed({
+                    binding.updateStatusText.visibility = View.GONE
+                }, 5000)
+            }
+        }
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        isPolling = false
         _binding = null
     }
 }
