@@ -153,32 +153,20 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Developer Info -->
-        <TextView
-            android:id="@+id/developerText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:text="Developed by Daniel"
-            android:textSize="12sp"
-            android:textColor="?android:attr/textColorSecondary"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/updateCard" />
-
+        <!-- Copyright -->
         <TextView
             android:id="@+id/copyrightText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="32dp"
             android:layout_marginBottom="24dp"
-            android:text="© 2024 Energy 2.0 webmenow.ca"
+            android:text="Energy 2.0 - Copyright © 2025 webmenow.ca"
             android:textSize="12sp"
             android:textColor="?android:attr/textColorSecondary"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/developerText" />
+            app:layout_constraintTop_toBottomOf="@id/updateCard" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
