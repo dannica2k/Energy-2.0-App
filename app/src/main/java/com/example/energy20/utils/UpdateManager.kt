@@ -103,14 +103,35 @@ class UpdateManager(private val context: Context) {
         val fileName = "Energy20_update.apk"
         
         // Use app-specific storage (no permissions required)
-        val destination = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        
+        // Ensure directory exists
+        if (downloadDir != null && !downloadDir.exists()) {
+            downloadDir.mkdirs()
+        }
+        
+        val destination = File(downloadDir, fileName)
+        
+        // Delete old file if exists
+        if (destination.exists()) {
+            destination.delete()
+        }
         
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setTitle("Energy20 Update")
             setDescription("Downloading latest version...")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            setDestinationUri(Uri.fromFile(destination))
+            
+            // Use setDestinationInExternalFilesDir instead of setDestinationUri
+            setDestinationInExternalFilesDir(
+                context,
+                Environment.DIRECTORY_DOWNLOADS,
+                fileName
+            )
+            
             setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE)
+            setAllowedOverMetered(true)
+            setAllowedOverRoaming(true)
         }
         
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -127,11 +148,18 @@ class UpdateManager(private val context: Context) {
             }
         }
         
-        context.registerReceiver(
-            onComplete,
-            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-            Context.RECEIVER_NOT_EXPORTED
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(
+                onComplete,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            context.registerReceiver(
+                onComplete,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            )
+        }
         
         return downloadId
     }
