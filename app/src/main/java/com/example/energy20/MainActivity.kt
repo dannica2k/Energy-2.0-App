@@ -1,7 +1,11 @@
 package com.example.energy20
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.ImageView
@@ -14,6 +18,7 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import com.example.energy20.auth.AuthInterceptor
 import com.example.energy20.auth.AuthManager
 import com.example.energy20.auth.LoginActivity
 import com.example.energy20.databinding.ActivityMainBinding
@@ -21,6 +26,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.navigation.NavigationView
+import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,8 +36,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var googleSignInClient: GoogleSignInClient
 
     companion object {
+        private const val TAG = "MainActivity"
         // Must match the WEB_CLIENT_ID in LoginActivity
         private const val WEB_CLIENT_ID = "242021166104-he2lbj7avj8r6ujlhc79n7i6al087idv.apps.googleusercontent.com"
+    }
+    
+    /**
+     * BroadcastReceiver to handle token expiration events
+     */
+    private val tokenExpirationReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AuthInterceptor.ACTION_TOKEN_EXPIRED) {
+                Log.w(TAG, "Token expiration broadcast received - redirecting to login")
+                handleTokenExpiration()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +64,11 @@ class MainActivity : AppCompatActivity() {
             navigateToLogin()
             return
         }
+
+        // Register broadcast receiver for token expiration
+        val filter = IntentFilter(AuthInterceptor.ACTION_TOKEN_EXPIRED)
+        registerReceiver(tokenExpirationReceiver, filter, RECEIVER_NOT_EXPORTED)
+        Log.d(TAG, "Token expiration receiver registered")
 
         // Initialize Google Sign-In client for logout
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -93,6 +117,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    override fun onDestroy() {
+        super.onDestroy()
+        // Unregister broadcast receiver
+        try {
+            unregisterReceiver(tokenExpirationReceiver)
+            Log.d(TAG, "Token expiration receiver unregistered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering receiver", e)
+        }
+    }
+    
     /**
      * Set up navigation drawer header with user information
      */
@@ -132,6 +167,22 @@ class MainActivity : AppCompatActivity() {
             authManager.logout()
             // Navigate to login screen
             navigateToLogin()
+        }
+    }
+    
+    /**
+     * Handle token expiration - show message and redirect to login
+     */
+    private fun handleTokenExpiration() {
+        runOnUiThread {
+            AlertDialog.Builder(this)
+                .setTitle("Session Expired")
+                .setMessage("Your session has expired. Please sign in again.")
+                .setPositiveButton("Sign In") { _, _ ->
+                    navigateToLogin()
+                }
+                .setCancelable(false)
+                .show()
         }
     }
     
