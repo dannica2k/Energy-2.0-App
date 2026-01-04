@@ -13,13 +13,15 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.launch
 import android.util.Log
+import com.example.energy20.auth.AuthManager
 import java.text.SimpleDateFormat
 import java.util.*
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = EnergyRepository()
     private val context = application.applicationContext
+    private val repository = EnergyRepository(context)
+    private val authManager = AuthManager.getInstance(context)
     
     private val _energyData = MutableLiveData<DeviceEnergyData>()
     val energyData: LiveData<DeviceEnergyData> = _energyData
@@ -39,10 +41,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     
     init {
-        // Load device usage data
-        loadDeviceUsage()
-        // Load data for last 7 days by default
-        loadEnergyData()
+        // Check if user has devices
+        val userDevices = authManager.getUserDevices()
+        if (userDevices.isEmpty()) {
+            _errorMessage.value = "No devices found. Add a device in Settings to view energy data."
+            _isLoading.value = false
+        } else {
+            // Load device usage data for first device
+            val deviceId = userDevices.first().deviceId
+            loadDeviceUsage(deviceId)
+            // Load data for last 7 days by default
+            loadEnergyData()
+        }
     }
     
     /**
@@ -56,14 +66,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             _errorMessage.value = null
             
             try {
+                // Get user's first device
+                val userDevices = authManager.getUserDevices()
+                if (userDevices.isEmpty()) {
+                    _errorMessage.value = "No devices found. Add a device in Settings to view energy data."
+                    _isLoading.value = false
+                    return@launch
+                }
+                
+                val deviceId = userDevices.first().deviceId
+                
                 val calendar = Calendar.getInstance()
                 val end = endDate ?: dateFormat.format(calendar.time)
                 
                 calendar.add(Calendar.DAY_OF_YEAR, -7)
                 val start = startDate ?: dateFormat.format(calendar.time)
                 
-                // Load energy data
-                val energyResult = repository.getDailyEnergyData(start, end)
+                // Load energy data with device ID
+                val energyResult = repository.getDailyEnergyData(start, end, deviceId)
                 
                 energyResult.onSuccess { data ->
                     _energyData.value = data
@@ -104,18 +124,27 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Loads device usage data including settings and energy summary
      */
-    fun loadDeviceUsage(deviceId: String = "D072F19EF0C8") {
+    fun loadDeviceUsage(deviceId: String? = null) {
         viewModelScope.launch {
             try {
-                val result = repository.getDeviceUsageData(deviceId)
+                // Get device ID from user's devices or use provided one
+                val userDevices = authManager.getUserDevices()
+                val actualDeviceId = deviceId ?: userDevices.firstOrNull()?.deviceId
+                
+                if (actualDeviceId == null) {
+                    _errorMessage.value = "No devices found. Add a device in Settings to view energy data."
+                    return@launch
+                }
+                
+                val result = repository.getDeviceUsageData(actualDeviceId)
                 
                 result.onSuccess { data ->
                     _deviceUsage.value = data
                 }.onFailure { error ->
-                    // Silently fail for device usage - not critical
+                    _errorMessage.value = "Failed to load device data: ${error.message}"
                 }
             } catch (e: Exception) {
-                // Silently fail
+                _errorMessage.value = "Error loading device: ${e.message}"
             }
         }
     }

@@ -103,13 +103,13 @@
                     <com.github.mikephil.charting.charts.LineChart
                         android:id="@+id/energyChart"
                         android:layout_width="match_parent"
-                        android:layout_height="400dp" />
+                        android:layout_height="240dp" />
 
                     <!-- Empty State -->
                     <TextView
                         android:id="@+id/emptyText"
                         android:layout_width="match_parent"
-                        android:layout_height="400dp"
+                        android:layout_height="240dp"
                         android:gravity="center"
                         android:text="No data available for the selected range"
                         android:textSize="16sp"

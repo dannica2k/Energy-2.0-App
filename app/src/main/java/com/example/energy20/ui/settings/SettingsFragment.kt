@@ -6,13 +6,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.example.energy20.api.AuthApiService
+import com.example.energy20.auth.AuthManager
 import com.example.energy20.databinding.FragmentSettingsBinding
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
+    
+    private lateinit var authManager: AuthManager
+    private lateinit var authApiService: AuthApiService
     
     companion object {
         private const val PREFS_NAME = "energy_settings"
@@ -74,8 +81,12 @@ class SettingsFragment : Fragment() {
     ): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         
+        authManager = AuthManager.getInstance(requireContext())
+        authApiService = AuthApiService(requireContext())
+        
         setupUI()
         loadSettings()
+        loadDevices()
         
         return binding.root
     }
@@ -88,7 +99,18 @@ class SettingsFragment : Fragment() {
         binding.saveWeatherButton.setOnClickListener {
             saveWeatherSettings()
         }
+        
+        binding.addDeviceButton.setOnClickListener {
+            addDevice()
+        }
+        
+        // Debug button - temporary for diagnosing auth issues
+        binding.deviceIdInput.setOnLongClickListener {
+            debugAuth()
+            true
+        }
     }
+
     
     private fun loadSettings() {
         // Load occupancy threshold
@@ -108,6 +130,64 @@ class SettingsFragment : Fragment() {
             binding.celsiusRadio.isChecked = true
         } else {
             binding.fahrenheitRadio.isChecked = true
+        }
+    }
+    
+    private fun loadDevices() {
+        val devices = authManager.getUserDevices()
+        if (devices.isEmpty()) {
+            binding.devicesListText.text = "No devices added yet"
+        } else {
+            val deviceList = devices.joinToString("\n") { "• ${it.deviceId}" }
+            binding.devicesListText.text = deviceList
+        }
+    }
+    
+    private fun addDevice() {
+        val deviceId = binding.deviceIdInput.text.toString().trim().uppercase()
+        
+        if (deviceId.isEmpty()) {
+            Snackbar.make(binding.root, "Please enter a device ID", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Show loading state
+        binding.addDeviceButton.isEnabled = false
+        binding.addDeviceButton.text = "Adding..."
+        
+        lifecycleScope.launch {
+            try {
+                val result = authApiService.addDevice(deviceId)
+                
+                result.onSuccess { response ->
+                    // Add device to local storage
+                    authManager.addDevice(response.device)
+                    
+                    // Clear input
+                    binding.deviceIdInput.text?.clear()
+                    
+                    // Reload devices list
+                    loadDevices()
+                    
+                    // Show success message
+                    binding.successText.text = "Device ${response.device.deviceId} added successfully!"
+                    binding.successText.visibility = View.VISIBLE
+                    binding.successText.postDelayed({
+                        binding.successText.visibility = View.GONE
+                    }, 3000)
+                    
+                    Snackbar.make(binding.root, "Device added! Refresh home screen to see data.", Snackbar.LENGTH_LONG).show()
+                    
+                }.onFailure { error ->
+                    Snackbar.make(binding.root, "Failed to add device: ${error.message}", Snackbar.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Snackbar.make(binding.root, "Error: ${e.message}", Snackbar.LENGTH_LONG).show()
+            } finally {
+                // Reset button state
+                binding.addDeviceButton.isEnabled = true
+                binding.addDeviceButton.text = "Add"
+            }
         }
     }
     
@@ -184,6 +264,40 @@ class SettingsFragment : Fragment() {
             
         } catch (e: NumberFormatException) {
             Snackbar.make(binding.root, "Please enter valid coordinates", Snackbar.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Debug authentication - calls debug endpoint and displays results
+     * Triggered by long-pressing the device ID input field
+     */
+    private fun debugAuth() {
+        Snackbar.make(binding.root, "Running auth diagnostics...", Snackbar.LENGTH_SHORT).show()
+        
+        lifecycleScope.launch {
+            try {
+                val result = authApiService.debugAuth()
+                
+                result.onSuccess { debugJson ->
+                    // Log the full response
+                    android.util.Log.d("SettingsFragment", "=== AUTH DEBUG RESPONSE ===")
+                    android.util.Log.d("SettingsFragment", debugJson)
+                    android.util.Log.d("SettingsFragment", "=== END DEBUG RESPONSE ===")
+                    
+                    Snackbar.make(
+                        binding.root, 
+                        "Debug info logged! Check Logcat for 'SettingsFragment'", 
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                    
+                }.onFailure { error ->
+                    android.util.Log.e("SettingsFragment", "Debug failed: ${error.message}")
+                    Snackbar.make(binding.root, "Debug failed: ${error.message}", Snackbar.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsFragment", "Debug error", e)
+                Snackbar.make(binding.root, "Debug error: ${e.message}", Snackbar.LENGTH_LONG).show()
+            }
         }
     }
 

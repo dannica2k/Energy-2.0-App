@@ -1,13 +1,14 @@
 package com.example.energy20.repository
 
+import android.content.Context
 import com.example.energy20.data.DeviceEnergyData
 import com.example.energy20.data.DeviceInfo
 import com.example.energy20.data.DeviceUsageResponse
 import com.example.energy20.data.DailyTemperature
 import com.example.energy20.network.EnergyApiService
 import com.example.energy20.network.WeatherApiService
-import com.example.energy20.utils.HtmlJsonExtractor
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,7 +18,8 @@ import okhttp3.OkHttpClient
  * Repository for accessing energy consumption and weather data
  */
 class EnergyRepository(
-    private val apiService: EnergyApiService = EnergyApiService.getInstance(),
+    context: Context,
+    private val apiService: EnergyApiService = EnergyApiService.getInstance(context),
     private val weatherApiService: WeatherApiService = WeatherApiService(OkHttpClient())
 ) {
     
@@ -25,26 +27,41 @@ class EnergyRepository(
     
     /**
      * Fetches daily energy data for the specified date range
+     * Uses the new authenticated API that returns pure JSON
      * 
      * @param startDate Date in YYYY-MM-DD format
      * @param endDate Date in YYYY-MM-DD format
+     * @param deviceId The device ID to fetch data for
      * @return Result containing DeviceEnergyData or error
      */
     suspend fun getDailyEnergyData(
         startDate: String,
-        endDate: String
+        endDate: String,
+        deviceId: String
     ): Result<DeviceEnergyData> = withContext(Dispatchers.IO) {
         try {
-            // 1. Fetch HTML page
-            val html = apiService.fetchDailyConsumptionPage(startDate, endDate)
+            // 1. Fetch JSON from authenticated API
+            val jsonString = apiService.fetchDailyEnergyData(startDate, endDate, deviceId)
             
-            // 2. Extract JSON from HTML
-            val jsonString = HtmlJsonExtractor.extractDailyData(html)
-                ?: return@withContext Result.failure(Exception("Could not extract JSON from HTML"))
+            android.util.Log.d("EnergyRepository", "=== ENERGY DATA API RESPONSE ===")
+            android.util.Log.d("EnergyRepository", "Request: $startDate to $endDate")
+            android.util.Log.d("EnergyRepository", "Response: $jsonString")
             
-            // 3. Parse JSON to Kotlin objects
+            // 2. Parse the response
+            val jsonObject = gson.fromJson(jsonString, JsonObject::class.java)
+            
+            // 3. Extract the data field which contains the energy data
+            val dataObject = jsonObject.getAsJsonObject("data")
+            
+            // 4. Parse to DeviceEnergyData (Map<String, DeviceInfo>)
             val type = object : TypeToken<Map<String, DeviceInfo>>() {}.type
-            val data: DeviceEnergyData = gson.fromJson(jsonString, type)
+            val data: DeviceEnergyData = gson.fromJson(dataObject, type)
+            
+            // Log the dates we got
+            data.values.firstOrNull()?.data?.keys?.sorted()?.let { dates ->
+                android.util.Log.d("EnergyRepository", "Dates in response: ${dates.joinToString(", ")}")
+                android.util.Log.d("EnergyRepository", "Total dates: ${dates.size}")
+            }
             
             Result.success(data)
         } catch (e: Exception) {
@@ -59,7 +76,7 @@ class EnergyRepository(
      * @return Result containing DeviceUsageResponse or error
      */
     suspend fun getDeviceUsageData(
-        deviceId: String = "D072F19EF0C8"
+        deviceId: String
     ): Result<DeviceUsageResponse> = withContext(Dispatchers.IO) {
         try {
             // Fetch JSON data
