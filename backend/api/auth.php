@@ -131,14 +131,16 @@ try {
     $stmt->close();
     
     // Get user's devices
+    // Note: GROUP BY ensures only one row per device (device_settings has multiple rows per device for circuits)
     $devicesStmt = $conn->prepare(
         "SELECT 
             ud.device_id, 
-            COALESCE(ds.device_name, CONCAT('Device ', ud.device_id)) as device_name,
+            COALESCE(MAX(ds.device_name), CONCAT('Device ', ud.device_id)) as device_name,
             ud.added_at
          FROM user_devices ud
          LEFT JOIN device_settings ds ON ud.device_id = ds.device_id
          WHERE ud.user_id = ?
+         GROUP BY ud.device_id, ud.added_at
          ORDER BY ud.added_at DESC"
     );
     

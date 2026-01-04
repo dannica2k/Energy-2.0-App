@@ -63,17 +63,19 @@ try {
     $userStmt->close();
     
     // Get user's devices with additional info
+    // Note: GROUP BY ensures only one row per device (device_settings has multiple rows per device for circuits)
     $devicesStmt = $conn->prepare(
         "SELECT 
             ud.device_id, 
-            COALESCE(ds.device_name, CONCAT('Device ', ud.device_id)) as device_name,
-            ds.timezone_id,
+            COALESCE(MAX(ds.device_name), CONCAT('Device ', ud.device_id)) as device_name,
+            MAX(ds.timezone_id) as timezone_id,
             ud.added_at,
             (SELECT COUNT(*) FROM daily_energy de WHERE de.device_id = ud.device_id) as data_count,
             (SELECT MAX(LocalTS) FROM daily_energy de WHERE de.device_id = ud.device_id) as last_data_date
          FROM user_devices ud
          LEFT JOIN device_settings ds ON ud.device_id = ds.device_id
          WHERE ud.user_id = ?
+         GROUP BY ud.device_id, ud.added_at
          ORDER BY ud.added_at DESC"
     );
     
