@@ -135,6 +135,40 @@ class AuthApiService(context: Context) {
     }
     
     /**
+     * Remove device from user's account
+     */
+    suspend fun removeDevice(deviceId: String): Result<RemoveDeviceResponse> = withContext(Dispatchers.IO) {
+        try {
+            val json = gson.toJson(mapOf("device_id" to deviceId))
+            val body = json.toRequestBody("application/json".toMediaType())
+            
+            val request = Request.Builder()
+                .url("$baseUrl/remove_device.php")
+                .post(body)
+                .build()
+            
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string()
+            
+            if (response.isSuccessful && responseBody != null) {
+                val removeDeviceResponse = gson.fromJson(responseBody, RemoveDeviceResponse::class.java)
+                Result.success(removeDeviceResponse)
+            } else {
+                val error = try {
+                    gson.fromJson(responseBody, ApiError::class.java)
+                } catch (e: Exception) {
+                    ApiError("Failed to remove device", "HTTP ${response.code}")
+                }
+                Result.failure(Exception(error.message ?: error.error))
+            }
+        } catch (e: IOException) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Remove device error: ${e.message}"))
+        }
+    }
+    
+    /**
      * Debug authentication - returns detailed diagnostic information
      * This helps diagnose authorization header issues
      */

@@ -128,6 +128,44 @@ Authorization: Bearer <GOOGLE_ID_TOKEN>
 
 ---
 
+### 4. POST /api/remove_device.php
+**Purpose:** Remove a device from user's account
+
+**Authentication:** Required (Bearer token)
+
+**Request Body:**
+```json
+{
+  "device_id": "device_001"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Device removed successfully",
+  "device_id": "device_001",
+  "devices": [
+    {
+      "device_id": "device_002",
+      "device_name": "Secondary Monitor",
+      "added_at": "2026-01-02 12:00:00"
+    }
+  ],
+  "device_count": 1
+}
+```
+
+**Error Responses:**
+- `400`: Missing device_id
+- `401`: Missing or invalid token
+- `404`: Device not found in user's account
+- `405`: Method not allowed (use POST or DELETE)
+- `500`: Database error
+
+---
+
 ## Testing with cURL
 
 ### 1. Test Authentication

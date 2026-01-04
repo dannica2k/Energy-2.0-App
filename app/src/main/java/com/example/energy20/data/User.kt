@@ -67,6 +67,19 @@ data class GetDevicesResponse(
 )
 
 /**
+ * Remove device response
+ */
+data class RemoveDeviceResponse(
+    val success: Boolean,
+    val message: String,
+    @SerializedName("device_id")
+    val deviceId: String,
+    val devices: List<UserDevice>,
+    @SerializedName("device_count")
+    val deviceCount: Int
+)
+
+/**
  * Error response from API
  */
 data class ApiError(

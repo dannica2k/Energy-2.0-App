@@ -5,10 +5,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.energy20.api.AuthApiService
 import com.example.energy20.auth.AuthManager
+import com.example.energy20.data.UserDevice
 import com.example.energy20.databinding.FragmentSettingsBinding
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
@@ -20,6 +23,7 @@ class SettingsFragment : Fragment() {
     
     private lateinit var authManager: AuthManager
     private lateinit var authApiService: AuthApiService
+    private lateinit var deviceAdapter: DeviceListAdapter
     
     companion object {
         private const val PREFS_NAME = "energy_settings"
@@ -92,6 +96,15 @@ class SettingsFragment : Fragment() {
     }
     
     private fun setupUI() {
+        // Setup RecyclerView
+        deviceAdapter = DeviceListAdapter { device ->
+            showDeleteConfirmation(device)
+        }
+        binding.devicesRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = deviceAdapter
+        }
+        
         binding.saveButton.setOnClickListener {
             saveSettings()
         }
@@ -135,11 +148,61 @@ class SettingsFragment : Fragment() {
     
     private fun loadDevices() {
         val devices = authManager.getUserDevices()
+        deviceAdapter.submitList(devices)
+        
+        // Show/hide empty state
         if (devices.isEmpty()) {
-            binding.devicesListText.text = "No devices added yet"
+            binding.devicesRecyclerView.visibility = View.GONE
+            binding.emptyDevicesText.visibility = View.VISIBLE
         } else {
-            val deviceList = devices.joinToString("\n") { "• ${it.deviceId}" }
-            binding.devicesListText.text = deviceList
+            binding.devicesRecyclerView.visibility = View.VISIBLE
+            binding.emptyDevicesText.visibility = View.GONE
+        }
+    }
+    
+    private fun showDeleteConfirmation(device: UserDevice) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Remove Device")
+            .setMessage("Are you sure you want to remove device ${device.deviceId} (${device.deviceName}) from your account?\n\nThis will not delete the device's data, only remove it from your account.")
+            .setPositiveButton("Remove") { _, _ ->
+                deleteDevice(device)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun deleteDevice(device: UserDevice) {
+        lifecycleScope.launch {
+            try {
+                val result = authApiService.removeDevice(device.deviceId)
+                
+                result.onSuccess { response ->
+                    // Update local storage with new device list
+                    authManager.setUserDevices(response.devices)
+                    
+                    // Reload devices list
+                    loadDevices()
+                    
+                    Snackbar.make(
+                        binding.root,
+                        "Device ${device.deviceId} removed successfully",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                    
+                }.onFailure { error ->
+                    Snackbar.make(
+                        binding.root,
+                        "Failed to remove device: ${error.message}",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+            } catch (e: Exception) {
+                Snackbar.make(
+                    binding.root,
+                    "Error: ${e.message}",
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
         }
     }
     

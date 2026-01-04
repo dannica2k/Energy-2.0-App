@@ -163,14 +163,27 @@
                 android:textStyle="bold"
                 android:textColor="?android:attr/textColorPrimary" />
 
+            <!-- Device List RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/devicesRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false"
+                tools:listitem="@layout/item_device"
+                tools:itemCount="2" />
+
+            <!-- Empty State Text -->
             <TextView
-                android:id="@+id/devicesListText"
+                android:id="@+id/emptyDevicesText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="No devices added yet"
                 android:textSize="14sp"
-                android:textColor="?android:attr/textColorSecondary" />
+                android:textColor="?android:attr/textColorSecondary"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
             <!-- Add Device Section -->
             <TextView
