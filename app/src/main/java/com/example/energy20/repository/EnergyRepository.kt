@@ -51,11 +51,21 @@ class EnergyRepository(
             val jsonObject = gson.fromJson(jsonString, JsonObject::class.java)
             
             // 3. Extract the data field which contains the energy data
-            val dataObject = jsonObject.getAsJsonObject("data")
+            val dataElement = jsonObject.get("data")
             
-            // 4. Parse to DeviceEnergyData (Map<String, DeviceInfo>)
-            val type = object : TypeToken<Map<String, DeviceInfo>>() {}.type
-            val data: DeviceEnergyData = gson.fromJson(dataObject, type)
+            // 4. Check if data is an object or array and handle accordingly
+            val data: DeviceEnergyData = if (dataElement.isJsonObject) {
+                // Single device or multiple devices as object
+                val dataObject = dataElement.asJsonObject
+                val type = object : TypeToken<Map<String, DeviceInfo>>() {}.type
+                gson.fromJson(dataObject, type)
+            } else if (dataElement.isJsonArray) {
+                // Multiple devices as array - convert to map
+                android.util.Log.w("EnergyRepository", "API returned array instead of object, converting...")
+                emptyMap() // Return empty map for now, this shouldn't happen with device_id parameter
+            } else {
+                throw Exception("Unexpected data format in API response")
+            }
             
             // Log the dates we got
             data.values.firstOrNull()?.data?.keys?.sorted()?.let { dates ->

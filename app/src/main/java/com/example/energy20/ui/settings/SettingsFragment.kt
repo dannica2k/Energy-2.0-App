@@ -90,15 +90,14 @@ class SettingsFragment : Fragment() {
         
         setupUI()
         loadSettings()
+        
+        // Load devices from local storage first (fast)
         loadDevices()
         
-        return binding.root
-    }
-    
-    override fun onResume() {
-        super.onResume()
-        // Refresh device list from server when fragment becomes visible
+        // Then refresh from server in background
         refreshDevicesFromServer()
+        
+        return binding.root
     }
     
     private fun setupUI() {
