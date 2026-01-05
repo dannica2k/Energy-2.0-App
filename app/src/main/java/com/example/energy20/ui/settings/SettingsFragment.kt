@@ -91,11 +91,8 @@ class SettingsFragment : Fragment() {
         setupUI()
         loadSettings()
         
-        // Load devices from local storage first (fast)
+        // Load devices from local storage
         loadDevices()
-        
-        // Then refresh from server in background
-        refreshDevicesFromServer()
         
         return binding.root
     }
@@ -122,9 +119,10 @@ class SettingsFragment : Fragment() {
             addDevice()
         }
         
-        // Debug button - temporary for diagnosing auth issues
+        // Manual refresh button - long press device ID input to refresh from server
         binding.deviceIdInput.setOnLongClickListener {
-            debugAuth()
+            refreshDevicesFromServer()
+            Snackbar.make(binding.root, "Refreshing devices from server...", Snackbar.LENGTH_SHORT).show()
             true
         }
     }
@@ -153,6 +151,18 @@ class SettingsFragment : Fragment() {
     
     private fun loadDevices() {
         val devices = authManager.getUserDevices()
+        
+        // LOGGING: Track device loading
+        android.util.Log.d("SettingsFragment", "=== LOAD DEVICES ===")
+        android.util.Log.d("SettingsFragment", "Device count: ${devices.size}")
+        devices.forEachIndexed { index, device ->
+            android.util.Log.d("SettingsFragment", "Device $index: ${device.deviceId} - ${device.deviceName}")
+            android.util.Log.d("SettingsFragment", "  Added: ${device.addedAt}")
+            android.util.Log.d("SettingsFragment", "  Timezone: ${device.timezoneId}")
+            android.util.Log.d("SettingsFragment", "  Data count: ${device.dataCount}")
+            android.util.Log.d("SettingsFragment", "  Last data: ${device.lastDataDate}")
+        }
+        
         deviceAdapter.submitList(devices)
         
         // Show/hide empty state

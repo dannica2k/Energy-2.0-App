@@ -138,10 +138,25 @@ class AuthManager private constructor(private val context: Context) {
      * Get user's devices
      */
     fun getUserDevices(): List<UserDevice> {
-        val devicesJson = securePrefs.getString(KEY_USER_DEVICES, null) ?: return emptyList()
+        val devicesJson = securePrefs.getString(KEY_USER_DEVICES, null)
+        
+        Log.d(TAG, "=== GET USER DEVICES ===")
+        Log.d(TAG, "Raw JSON from storage: $devicesJson")
+        
+        if (devicesJson == null) {
+            Log.d(TAG, "No devices in storage")
+            return emptyList()
+        }
+        
         return try {
-            gson.fromJson(devicesJson, Array<UserDevice>::class.java).toList()
+            val devices = gson.fromJson(devicesJson, Array<UserDevice>::class.java).toList()
+            Log.d(TAG, "Parsed ${devices.size} devices from storage")
+            devices.forEachIndexed { index, device ->
+                Log.d(TAG, "Device $index: ${device.deviceId} - ${device.deviceName}")
+            }
+            devices
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse devices from storage", e)
             emptyList()
         }
     }
@@ -154,11 +169,22 @@ class AuthManager private constructor(private val context: Context) {
         // Google ID tokens expire in 1 hour
         val expiryTime = System.currentTimeMillis() + (3600 * 1000L)
         
+        Log.d(TAG, "=== SAVE AUTH DATA ===")
+        Log.d(TAG, "User: ${user.email}")
+        Log.d(TAG, "Devices to save: ${devices.size}")
+        devices.forEachIndexed { index, device ->
+            Log.d(TAG, "Device $index: ${device.deviceId} - ${device.deviceName}")
+            Log.d(TAG, "  Timezone: ${device.timezoneId}, Data count: ${device.dataCount}")
+        }
+        
+        val devicesJson = gson.toJson(devices)
+        Log.d(TAG, "Devices JSON: $devicesJson")
+        
         securePrefs.edit().apply {
             putString(KEY_AUTH_TOKEN, token)
             putLong(KEY_TOKEN_EXPIRY, expiryTime)
             putString(KEY_USER_DATA, gson.toJson(user))
-            putString(KEY_USER_DEVICES, gson.toJson(devices))
+            putString(KEY_USER_DEVICES, devicesJson)
             putBoolean(KEY_IS_AUTHENTICATED, true)
             apply()
         }
@@ -170,10 +196,21 @@ class AuthManager private constructor(private val context: Context) {
      * Update user's devices list
      */
     fun updateDevices(devices: List<UserDevice>) {
+        Log.d(TAG, "=== UPDATE DEVICES ===")
+        Log.d(TAG, "Updating with ${devices.size} devices")
+        devices.forEachIndexed { index, device ->
+            Log.d(TAG, "Device $index: ${device.deviceId} - ${device.deviceName}")
+        }
+        
+        val devicesJson = gson.toJson(devices)
+        Log.d(TAG, "Devices JSON: $devicesJson")
+        
         securePrefs.edit().apply {
-            putString(KEY_USER_DEVICES, gson.toJson(devices))
+            putString(KEY_USER_DEVICES, devicesJson)
             apply()
         }
+        
+        Log.d(TAG, "Devices updated in storage")
     }
     
     /**
