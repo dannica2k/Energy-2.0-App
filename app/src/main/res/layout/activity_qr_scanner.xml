@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <!-- Camera Preview -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Top Bar with Controls -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="#80000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Close Button -->
+        <ImageButton
+            android:id="@+id/closeButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:contentDescription="Close scanner"
+            android:tint="@android:color/white" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- Flashlight Toggle Button -->
+        <ImageButton
+            android:id="@+id/flashlightButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_view"
+            android:contentDescription="Toggle flashlight"
+            android:tint="@android:color/white" />
+    </LinearLayout>
+
+    <!-- Scanning Guide Frame with Corner Markers -->
+    <FrameLayout
+        android:id="@+id/scanningFrame"
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_marginTop="80dp"
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        
+        <!-- Border outline -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent" />
+            
+        <!-- Top-left corner horizontal -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:background="@android:color/white"
+            android:layout_gravity="top|start" />
+        <!-- Top-left corner vertical -->
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:background="@android:color/white"
+            android:layout_gravity="top|start" />
+            
+        <!-- Top-right corner horizontal -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:background="@android:color/white"
+            android:layout_gravity="top|end" />
+        <!-- Top-right corner vertical -->
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:background="@android:color/white"
+            android:layout_gravity="top|end" />
+            
+        <!-- Bottom-left corner horizontal -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:background="@android:color/white"
+            android:layout_gravity="bottom|start" />
+        <!-- Bottom-left corner vertical -->
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:background="@android:color/white"
+            android:layout_gravity="bottom|start" />
+            
+        <!-- Bottom-right corner horizontal -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:background="@android:color/white"
+            android:layout_gravity="bottom|end" />
+        <!-- Bottom-right corner vertical -->
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:background="@android:color/white"
+            android:layout_gravity="bottom|end" />
+    </FrameLayout>
+
+    <!-- Instruction Text -->
+    <TextView
+        android:id="@+id/instructionText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Point camera at device QR code"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:padding="16dp"
+        android:background="#80000000"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/scanningFrame"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Bottom Hint Text -->
+    <TextView
+        android:id="@+id/hintText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:text="Align the QR code within the frame\nScanning will happen automatically"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:padding="16dp"
+        android:background="#80000000"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

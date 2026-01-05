@@ -1,10 +1,15 @@
 package com.example.energy20.ui.devices
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -12,6 +17,7 @@ import com.example.energy20.api.AuthApiService
 import com.example.energy20.auth.AuthManager
 import com.example.energy20.data.UserDevice
 import com.example.energy20.databinding.FragmentDeviceManagementBinding
+import com.example.energy20.ui.qrscanner.QrScannerActivity
 import com.example.energy20.ui.settings.DeviceListAdapter
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
@@ -24,6 +30,36 @@ class DeviceManagementFragment : Fragment() {
     private lateinit var authManager: AuthManager
     private lateinit var authApiService: AuthApiService
     private lateinit var deviceAdapter: DeviceListAdapter
+    
+    // Activity result launcher for QR scanner
+    private val qrScannerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val deviceId = result.data?.getStringExtra(QrScannerActivity.EXTRA_DEVICE_ID)
+            deviceId?.let {
+                binding.deviceIdInput.setText(it)
+                Snackbar.make(binding.root, "Device ID scanned: $it", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    // Permission launcher for camera
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchQrScanner()
+        } else {
+            Snackbar.make(
+                binding.root,
+                "Camera permission is required to scan QR codes",
+                Snackbar.LENGTH_LONG
+            ).setAction("Settings") {
+                // User can manually enable in settings
+            }.show()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -58,6 +94,10 @@ class DeviceManagementFragment : Fragment() {
         
         binding.addDeviceButton.setOnClickListener {
             addDevice()
+        }
+        
+        binding.scanQrButton.setOnClickListener {
+            checkCameraPermissionAndScan()
         }
     }
     
@@ -297,6 +337,38 @@ class DeviceManagementFragment : Fragment() {
                 binding.addDeviceButton.text = "Add Device"
             }
         }
+    }
+
+    private fun checkCameraPermissionAndScan() {
+        when {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // Permission already granted
+                launchQrScanner()
+            }
+            shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
+                // Show rationale and request permission
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Camera Permission Required")
+                    .setMessage("Camera access is needed to scan QR codes on your energy monitoring devices.")
+                    .setPositiveButton("Grant Permission") { _, _ ->
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+            else -> {
+                // Request permission directly
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
+    
+    private fun launchQrScanner() {
+        val intent = Intent(requireContext(), QrScannerActivity::class.java)
+        qrScannerLauncher.launch(intent)
     }
 
     override fun onDestroyView() {

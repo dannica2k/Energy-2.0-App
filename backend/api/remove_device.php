@@ -134,17 +134,21 @@ try {
     
     error_log("Device removed: $deviceId from user: " . $user['email'] . " (ID: $userId)");
     
-    // Get updated device list
+    // Get updated device list with all fields including location
     $devicesStmt = $conn->prepare(
         "SELECT 
             ud.device_id, 
             COALESCE(MAX(ds.device_name), CONCAT('Device ', ud.device_id)) as device_name,
-            ud.added_at
+            ud.added_at,
+            ud.is_active,
+            MAX(ds.timezone_id) as timezone_id,
+            ud.latitude,
+            ud.longitude
          FROM user_devices ud
          LEFT JOIN device_settings ds ON ud.device_id = ds.device_id
          WHERE ud.user_id = ?
-         GROUP BY ud.device_id, ud.added_at
-         ORDER BY ud.added_at DESC"
+         GROUP BY ud.device_id, ud.added_at, ud.is_active, ud.latitude, ud.longitude
+         ORDER BY ud.is_active DESC, ud.added_at DESC"
     );
     
     if (!$devicesStmt) {
@@ -160,7 +164,11 @@ try {
         $devices[] = [
             'device_id' => $row['device_id'],
             'device_name' => $row['device_name'],
-            'added_at' => $row['added_at']
+            'added_at' => $row['added_at'],
+            'is_active' => (bool)$row['is_active'],
+            'timezone_id' => $row['timezone_id'],
+            'latitude' => $row['latitude'] !== null ? (float)$row['latitude'] : null,
+            'longitude' => $row['longitude'] !== null ? (float)$row['longitude'] : null
         ];
     }
     

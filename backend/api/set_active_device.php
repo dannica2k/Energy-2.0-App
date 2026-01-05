@@ -140,7 +140,7 @@ try {
         // Commit transaction
         $conn->commit();
         
-        // Get updated list of devices with device info
+        // Get updated list of devices with device info including location
         // Optimized query - removed slow correlated subqueries for data_count and last_data_date
         $stmt = $conn->prepare("
             SELECT 
@@ -148,11 +148,13 @@ try {
                 COALESCE(MAX(ds.device_name), CONCAT('Device ', ud.device_id)) as device_name,
                 ud.added_at,
                 ud.is_active,
-                MAX(ds.timezone_id) as timezone_id
+                MAX(ds.timezone_id) as timezone_id,
+                ud.latitude,
+                ud.longitude
             FROM user_devices ud
             LEFT JOIN device_settings ds ON ud.device_id = ds.device_id
             WHERE ud.user_id = ?
-            GROUP BY ud.device_id, ud.added_at, ud.is_active
+            GROUP BY ud.device_id, ud.added_at, ud.is_active, ud.latitude, ud.longitude
             ORDER BY ud.is_active DESC, ud.added_at DESC
         ");
         $stmt->bind_param("i", $userId);
@@ -166,7 +168,9 @@ try {
                 'device_name' => $row['device_name'],
                 'added_at' => $row['added_at'],
                 'is_active' => (bool)$row['is_active'],
-                'timezone_id' => $row['timezone_id']
+                'timezone_id' => $row['timezone_id'],
+                'latitude' => $row['latitude'] !== null ? (float)$row['latitude'] : null,
+                'longitude' => $row['longitude'] !== null ? (float)$row['longitude'] : null
             ];
         }
         $stmt->close();

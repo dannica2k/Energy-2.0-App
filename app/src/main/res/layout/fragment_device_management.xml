@@ -104,26 +104,45 @@
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
 
-                <com.google.android.material.textfield.TextInputLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:hint="Device ID"
-                    app:boxBackgroundMode="outline">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/deviceIdInput"
-                        android:layout_width="match_parent"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="text"
-                        android:textAllCaps="true" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Device ID"
+                        app:boxBackgroundMode="outline">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/deviceIdInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:textAllCaps="true" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <Button
+                        android:id="@+id/scanQrButton"
+                        style="@style/Widget.Material3.Button.Icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Scan QR"
+                        android:textSize="12sp"
+                        app:icon="@android:drawable/ic_menu_camera"
+                        app:iconGravity="textStart" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Enter the device ID from your energy monitor (e.g., D072F19EF0C8)"
+                    android:text="Enter the device ID or scan the QR code on your energy monitor"
                     android:textSize="12sp"
                     android:textStyle="italic"
                     android:textColor="?android:attr/textColorSecondary" />
