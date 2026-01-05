@@ -178,7 +178,7 @@ class SettingsFragment : Fragment() {
                 
                 result.onSuccess { response ->
                     // Update local storage with new device list
-                    authManager.setUserDevices(response.devices)
+                    authManager.updateDevices(response.devices)
                     
                     // Reload devices list
                     loadDevices()
