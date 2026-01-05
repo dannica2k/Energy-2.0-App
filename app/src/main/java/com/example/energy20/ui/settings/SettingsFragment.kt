@@ -95,6 +95,12 @@ class SettingsFragment : Fragment() {
         return binding.root
     }
     
+    override fun onResume() {
+        super.onResume()
+        // Refresh device list from server when fragment becomes visible
+        refreshDevicesFromServer()
+    }
+    
     private fun setupUI() {
         // Setup RecyclerView
         deviceAdapter = DeviceListAdapter { device ->
@@ -327,6 +333,37 @@ class SettingsFragment : Fragment() {
             
         } catch (e: NumberFormatException) {
             Snackbar.make(binding.root, "Please enter valid coordinates", Snackbar.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Refresh device list from server
+     * Called when fragment becomes visible to ensure list is up-to-date
+     */
+    private fun refreshDevicesFromServer() {
+        lifecycleScope.launch {
+            try {
+                val result = authApiService.getDevices()
+                
+                result.onSuccess { response ->
+                    // Update local storage with server data
+                    authManager.updateDevices(response.devices)
+                    
+                    // Reload UI
+                    loadDevices()
+                    
+                    android.util.Log.d("SettingsFragment", "Devices refreshed from server: ${response.devices.size} devices")
+                    
+                }.onFailure { error ->
+                    android.util.Log.e("SettingsFragment", "Failed to refresh devices: ${error.message}")
+                    // Still show local devices even if refresh fails
+                    loadDevices()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsFragment", "Error refreshing devices", e)
+                // Still show local devices even if refresh fails
+                loadDevices()
+            }
         }
     }
     
