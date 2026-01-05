@@ -174,7 +174,7 @@ class AuthManager private constructor(private val context: Context) {
         Log.d(TAG, "Devices to save: ${devices.size}")
         devices.forEachIndexed { index, device ->
             Log.d(TAG, "Device $index: ${device.deviceId} - ${device.deviceName}")
-            Log.d(TAG, "  Timezone: ${device.timezoneId}, Data count: ${device.dataCount}")
+            Log.d(TAG, "  Timezone: ${device.timezoneId}, Active: ${device.isActive}")
         }
         
         val devicesJson = gson.toJson(devices)
