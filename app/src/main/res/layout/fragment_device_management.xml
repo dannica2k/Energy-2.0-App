@@ -87,6 +87,13 @@
                     android:visibility="gone"
                     tools:visibility="visible" />
 
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="24dp"
+                    android:background="?android:attr/listDivider" />
+
                 <!-- Add Device Section -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -97,45 +104,93 @@
                     android:textStyle="bold"
                     android:textColor="?android:attr/textColorPrimary" />
 
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:hint="Device ID"
+                    app:boxBackgroundMode="outline">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/deviceIdInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:textAllCaps="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Enter the device ID from your energy monitor (e.g., D072F19EF0C8)"
+                    android:textSize="12sp"
+                    android:textStyle="italic"
+                    android:textColor="?android:attr/textColorSecondary" />
+
+                <!-- Location Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Device Location (for weather data)"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginEnd="16dp"
-                        android:hint="Device ID"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Latitude"
                         app:boxBackgroundMode="outline">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/deviceIdInput"
+                            android:id="@+id/latitudeInput"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:textAllCaps="true" />
+                            android:inputType="numberDecimal|numberSigned" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <Button
-                        android:id="@+id/addDeviceButton"
-                        android:layout_width="wrap_content"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Add"
-                        android:textStyle="bold" />
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:hint="Longitude"
+                        app:boxBackgroundMode="outline">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/longitudeInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal|numberSigned" />
+                    </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Enter the device ID from your energy monitor (e.g., D072F19EF0C8)"
+                    android:layout_marginTop="4dp"
+                    android:text="Latitude: -90 to 90, Longitude: -180 to 180 (optional)"
                     android:textSize="12sp"
                     android:textStyle="italic"
                     android:textColor="?android:attr/textColorSecondary" />
+
+                <Button
+                    android:id="@+id/addDeviceButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Add Device"
+                    android:textStyle="bold" />
 
             </LinearLayout>
 

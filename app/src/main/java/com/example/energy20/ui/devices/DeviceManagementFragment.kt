@@ -72,6 +72,8 @@ class DeviceManagementFragment : Fragment() {
             android.util.Log.d("DeviceManagementFragment", "  Added: ${device.addedAt}")
             android.util.Log.d("DeviceManagementFragment", "  Active: ${device.isActive}")
             android.util.Log.d("DeviceManagementFragment", "  Timezone: ${device.timezoneId}")
+            android.util.Log.d("DeviceManagementFragment", "  Latitude: ${device.latitude}")
+            android.util.Log.d("DeviceManagementFragment", "  Longitude: ${device.longitude}")
         }
         
         deviceAdapter.submitList(devices)
@@ -216,10 +218,43 @@ class DeviceManagementFragment : Fragment() {
     
     private fun addDevice() {
         val deviceId = binding.deviceIdInput.text.toString().trim().uppercase()
+        val latText = binding.latitudeInput.text.toString().trim()
+        val lonText = binding.longitudeInput.text.toString().trim()
         
         if (deviceId.isEmpty()) {
             Snackbar.make(binding.root, "Please enter a device ID", Snackbar.LENGTH_SHORT).show()
             return
+        }
+        
+        // Parse and validate coordinates (optional fields)
+        var latitude: Double? = null
+        var longitude: Double? = null
+        
+        if (latText.isNotEmpty() || lonText.isNotEmpty()) {
+            // If one is provided, both must be provided
+            if (latText.isEmpty() || lonText.isEmpty()) {
+                Snackbar.make(binding.root, "Please enter both latitude and longitude, or leave both empty", Snackbar.LENGTH_LONG).show()
+                return
+            }
+            
+            try {
+                latitude = latText.toDouble()
+                longitude = lonText.toDouble()
+                
+                // Validate coordinate ranges
+                if (latitude < -90 || latitude > 90) {
+                    Snackbar.make(binding.root, "Latitude must be between -90 and 90", Snackbar.LENGTH_LONG).show()
+                    return
+                }
+                
+                if (longitude < -180 || longitude > 180) {
+                    Snackbar.make(binding.root, "Longitude must be between -180 and 180", Snackbar.LENGTH_LONG).show()
+                    return
+                }
+            } catch (e: NumberFormatException) {
+                Snackbar.make(binding.root, "Please enter valid numbers for coordinates", Snackbar.LENGTH_LONG).show()
+                return
+            }
         }
         
         // Show loading state
@@ -228,14 +263,16 @@ class DeviceManagementFragment : Fragment() {
         
         lifecycleScope.launch {
             try {
-                val result = authApiService.addDevice(deviceId)
+                val result = authApiService.addDevice(deviceId, latitude, longitude)
                 
                 result.onSuccess { response ->
                     // Add device to local storage
                     authManager.addDevice(response.device)
                     
-                    // Clear input
+                    // Clear inputs
                     binding.deviceIdInput.text?.clear()
+                    binding.latitudeInput.text?.clear()
+                    binding.longitudeInput.text?.clear()
                     
                     // Reload devices list
                     loadDevices()
@@ -257,7 +294,7 @@ class DeviceManagementFragment : Fragment() {
             } finally {
                 // Reset button state
                 binding.addDeviceButton.isEnabled = true
-                binding.addDeviceButton.text = "Add"
+                binding.addDeviceButton.text = "Add Device"
             }
         }
     }

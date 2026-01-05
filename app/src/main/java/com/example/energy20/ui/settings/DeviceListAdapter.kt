@@ -38,6 +38,14 @@ class DeviceListAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(device: UserDevice) {
+            // Log device data for debugging
+            android.util.Log.d("DeviceListAdapter", "=== BINDING DEVICE ===")
+            android.util.Log.d("DeviceListAdapter", "Device ID: ${device.deviceId}")
+            android.util.Log.d("DeviceListAdapter", "Device Name: ${device.deviceName}")
+            android.util.Log.d("DeviceListAdapter", "Latitude: ${device.latitude}")
+            android.util.Log.d("DeviceListAdapter", "Longitude: ${device.longitude}")
+            android.util.Log.d("DeviceListAdapter", "Is Active: ${device.isActive}")
+            
             binding.deviceIdText.text = device.deviceId
             binding.deviceNameText.text = device.deviceName
             
@@ -52,6 +60,14 @@ class DeviceListAdapter(
             }
             
             binding.addedDateText.text = "Added: $addedDate"
+            
+            // Always show location field
+            if (device.latitude != null && device.longitude != null) {
+                binding.locationText.text = "Location: ${device.latitude}, ${device.longitude}"
+            } else {
+                binding.locationText.text = "Location: Not set"
+            }
+            binding.locationText.visibility = android.view.View.VISIBLE
             
             // Show/hide active status badge
             if (device.isActive) {

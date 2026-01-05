@@ -72,9 +72,21 @@ class AuthApiService(context: Context) {
     /**
      * Add device to user's account
      */
-    suspend fun addDevice(deviceId: String): Result<AddDeviceResponse> = withContext(Dispatchers.IO) {
+    suspend fun addDevice(
+        deviceId: String,
+        latitude: Double? = null,
+        longitude: Double? = null
+    ): Result<AddDeviceResponse> = withContext(Dispatchers.IO) {
         try {
-            val json = gson.toJson(mapOf("device_id" to deviceId))
+            val requestData = mutableMapOf<String, Any>("device_id" to deviceId)
+            
+            // Add optional location data if provided
+            if (latitude != null && longitude != null) {
+                requestData["latitude"] = latitude
+                requestData["longitude"] = longitude
+            }
+            
+            val json = gson.toJson(requestData)
             val body = json.toRequestBody("application/json".toMediaType())
             
             val request = Request.Builder()

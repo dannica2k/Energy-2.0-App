@@ -59,6 +59,33 @@ if (empty($deviceId)) {
     exit;
 }
 
+// Extract optional location data
+$latitude = $input['latitude'] ?? null;
+$longitude = $input['longitude'] ?? null;
+
+// Validate coordinates if provided
+if ($latitude !== null || $longitude !== null) {
+    // Both must be provided together
+    if ($latitude === null || $longitude === null) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Both latitude and longitude must be provided together']);
+        exit;
+    }
+    
+    // Validate ranges
+    if ($latitude < -90 || $latitude > 90) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Latitude must be between -90 and 90']);
+        exit;
+    }
+    
+    if ($longitude < -180 || $longitude > 180) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Longitude must be between -180 and 180']);
+        exit;
+    }
+}
+
 // Connect to database
 $conn = new mysqli($servername, $username, $password, $dbname);
 
@@ -143,16 +170,28 @@ try {
     // Note: We allow multiple users to access the same device
     // No ownership check needed - devices can be shared
     
-    // Add device to user's account
-    $insertStmt = $conn->prepare(
-        "INSERT INTO user_devices (user_id, device_id) VALUES (?, ?)"
-    );
-    
-    if (!$insertStmt) {
-        throw new Exception("Insert prepare failed: " . $conn->error);
+    // Add device to user's account with optional location
+    if ($latitude !== null && $longitude !== null) {
+        $insertStmt = $conn->prepare(
+            "INSERT INTO user_devices (user_id, device_id, latitude, longitude) VALUES (?, ?, ?, ?)"
+        );
+        
+        if (!$insertStmt) {
+            throw new Exception("Insert prepare failed: " . $conn->error);
+        }
+        
+        $insertStmt->bind_param("isdd", $userId, $deviceId, $latitude, $longitude);
+    } else {
+        $insertStmt = $conn->prepare(
+            "INSERT INTO user_devices (user_id, device_id) VALUES (?, ?)"
+        );
+        
+        if (!$insertStmt) {
+            throw new Exception("Insert prepare failed: " . $conn->error);
+        }
+        
+        $insertStmt->bind_param("is", $userId, $deviceId);
     }
-    
-    $insertStmt->bind_param("is", $userId, $deviceId);
     
     if (!$insertStmt->execute()) {
         throw new Exception("Insert failed: " . $insertStmt->error);
@@ -181,15 +220,22 @@ try {
     
     error_log("Device added: $deviceId to user: " . $user['email'] . " (ID: $userId)");
     
+    // Build device response
+    $deviceResponse = [
+        'device_id' => $deviceId,
+        'device_name' => $deviceName,
+        'added_at' => date('Y-m-d H:i:s'),
+        'is_active' => false,
+        'timezone_id' => null,
+        'latitude' => $latitude,
+        'longitude' => $longitude
+    ];
+    
     // Return success response
     echo json_encode([
         'success' => true,
         'message' => 'Device added successfully',
-        'device' => [
-            'device_id' => $deviceId,
-            'device_name' => $deviceName,
-            'added_at' => date('Y-m-d H:i:s')
-        ]
+        'device' => $deviceResponse
     ]);
     
 } catch (Exception $e) {

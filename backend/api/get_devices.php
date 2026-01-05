@@ -71,11 +71,13 @@ try {
             COALESCE(MAX(ds.device_name), CONCAT('Device ', ud.device_id)) as device_name,
             MAX(ds.timezone_id) as timezone_id,
             ud.added_at,
-            ud.is_active
+            ud.is_active,
+            ud.latitude,
+            ud.longitude
          FROM user_devices ud
          LEFT JOIN device_settings ds ON ud.device_id = ds.device_id
          WHERE ud.user_id = ?
-         GROUP BY ud.device_id, ud.added_at, ud.is_active
+         GROUP BY ud.device_id, ud.added_at, ud.is_active, ud.latitude, ud.longitude
          ORDER BY ud.is_active DESC, ud.added_at DESC"
     );
     
@@ -94,7 +96,9 @@ try {
             'device_name' => $row['device_name'],
             'timezone_id' => $row['timezone_id'],
             'added_at' => $row['added_at'],
-            'is_active' => (bool)$row['is_active']
+            'is_active' => (bool)$row['is_active'],
+            'latitude' => $row['latitude'] !== null ? (float)$row['latitude'] : null,
+            'longitude' => $row['longitude'] !== null ? (float)$row['longitude'] : null
         ];
     }
     

@@ -91,27 +91,39 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     _errorMessage.value = error.message ?: "Failed to load energy data"
                 }
                 
-                // Load weather data for the same date range with settings
-                val latitude = SettingsFragment.getLatitude(context)
-                val longitude = SettingsFragment.getLongitude(context)
+                // Load weather data for the same date range using active device's location
+                val activeDevice = userDevices.find { it.isActive } ?: userDevices.first()
                 val useFahrenheit = !SettingsFragment.isCelsius(context)
                 
                 Log.d("HomeViewModel", "=== WEATHER DATA REQUEST ===")
                 Log.d("HomeViewModel", "Date range: $start to $end")
-                Log.d("HomeViewModel", "Latitude: $latitude, Longitude: $longitude")
+                Log.d("HomeViewModel", "Active device: ${activeDevice.deviceId} (${activeDevice.deviceName})")
+                Log.d("HomeViewModel", "Device location - Lat: ${activeDevice.latitude}, Lon: ${activeDevice.longitude}")
                 Log.d("HomeViewModel", "Use Fahrenheit: $useFahrenheit")
                 
-                val weatherResult = repository.getWeatherData(start, end, latitude, longitude, useFahrenheit)
-                
-                weatherResult.onSuccess { data ->
-                    Log.d("HomeViewModel", "Weather data received: ${data.size} days")
-                    data.forEachIndexed { index, temp ->
-                        Log.d("HomeViewModel", "Day $index: ${temp.date} - Avg: ${temp.avgTemp}°, Min: ${temp.minTemp}°, Max: ${temp.maxTemp}°")
+                // Only fetch weather if device has location set
+                if (activeDevice.latitude != null && activeDevice.longitude != null) {
+                    val weatherResult = repository.getWeatherData(
+                        start, 
+                        end, 
+                        activeDevice.latitude, 
+                        activeDevice.longitude, 
+                        useFahrenheit
+                    )
+                    
+                    weatherResult.onSuccess { data ->
+                        Log.d("HomeViewModel", "Weather data received: ${data.size} days")
+                        data.forEachIndexed { index, temp ->
+                            Log.d("HomeViewModel", "Day $index: ${temp.date} - Avg: ${temp.avgTemp}°, Min: ${temp.minTemp}°, Max: ${temp.maxTemp}°")
+                        }
+                        _weatherData.value = data
+                    }.onFailure { error ->
+                        Log.e("HomeViewModel", "Weather data failed: ${error.message}", error)
+                        _errorMessage.value = "Weather: ${error.message}"
                     }
-                    _weatherData.value = data
-                }.onFailure { error ->
-                    Log.e("HomeViewModel", "Weather data failed: ${error.message}", error)
-                    _errorMessage.value = "Weather: ${error.message}"
+                } else {
+                    Log.d("HomeViewModel", "No location set for device - skipping weather data")
+                    _weatherData.value = emptyList()
                 }
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "An error occurred"

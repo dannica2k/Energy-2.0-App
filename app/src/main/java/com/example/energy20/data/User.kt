@@ -41,7 +41,11 @@ data class UserDevice(
     @SerializedName("is_active")
     val isActive: Boolean = false,
     @SerializedName("timezone_id")
-    val timezoneId: String? = null
+    val timezoneId: String? = null,
+    @SerializedName("latitude")
+    val latitude: Double? = null,
+    @SerializedName("longitude")
+    val longitude: Double? = null
 )
 
 /**

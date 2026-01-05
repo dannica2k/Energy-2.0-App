@@ -149,66 +149,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Configure location and temperature units for weather overlay on energy chart."
+                android:text="Configure temperature unit for weather overlay on energy chart. Location is set per-device in Device Management."
                 android:textSize="14sp"
-                android:textColor="?android:attr/textColorSecondary" />
-
-            <!-- Location Coordinates -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Location Coordinates"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="?android:attr/textColorPrimary" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:hint="Latitude"
-                    app:boxBackgroundMode="outline">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/latitudeInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal|numberSigned"
-                        android:text="34.77" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:hint="Longitude"
-                    app:boxBackgroundMode="outline">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/longitudeInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="numberDecimal|numberSigned"
-                        android:text="32.42" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Default: Paphos, Cyprus (34.77, 32.42)"
-                android:textSize="12sp"
-                android:textStyle="italic"
                 android:textColor="?android:attr/textColorSecondary" />
 
             <!-- Temperature Unit -->

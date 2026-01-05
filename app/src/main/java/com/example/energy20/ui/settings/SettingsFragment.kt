@@ -96,12 +96,6 @@ class SettingsFragment : Fragment() {
         binding.thresholdInput.setText(threshold.toString())
         binding.currentValueText.text = "Current: $threshold kWh"
         
-        // Load weather settings
-        val latitude = getLatitude(requireContext())
-        val longitude = getLongitude(requireContext())
-        binding.latitudeInput.setText(latitude.toString())
-        binding.longitudeInput.setText(longitude.toString())
-        
         // Load temperature unit
         val isCelsius = isCelsius(requireContext())
         if (isCelsius) {
@@ -144,47 +138,17 @@ class SettingsFragment : Fragment() {
     }
     
     private fun saveWeatherSettings() {
-        val latText = binding.latitudeInput.text.toString()
-        val lonText = binding.longitudeInput.text.toString()
+        // Save temperature unit
+        val isCelsius = binding.celsiusRadio.isChecked
+        setTemperatureUnit(requireContext(), isCelsius)
         
-        if (latText.isEmpty() || lonText.isEmpty()) {
-            Snackbar.make(binding.root, "Please enter both latitude and longitude", Snackbar.LENGTH_SHORT).show()
-            return
-        }
+        // Show success message
+        binding.successText.visibility = View.VISIBLE
+        binding.successText.postDelayed({
+            binding.successText.visibility = View.GONE
+        }, 3000)
         
-        try {
-            val latitude = latText.toDouble()
-            val longitude = lonText.toDouble()
-            
-            // Validate coordinates
-            if (latitude < -90 || latitude > 90) {
-                Snackbar.make(binding.root, "Latitude must be between -90 and 90", Snackbar.LENGTH_SHORT).show()
-                return
-            }
-            
-            if (longitude < -180 || longitude > 180) {
-                Snackbar.make(binding.root, "Longitude must be between -180 and 180", Snackbar.LENGTH_SHORT).show()
-                return
-            }
-            
-            // Save location
-            setLocation(requireContext(), latitude, longitude)
-            
-            // Save temperature unit
-            val isCelsius = binding.celsiusRadio.isChecked
-            setTemperatureUnit(requireContext(), isCelsius)
-            
-            // Show success message
-            binding.successText.visibility = View.VISIBLE
-            binding.successText.postDelayed({
-                binding.successText.visibility = View.GONE
-            }, 3000)
-            
-            Snackbar.make(binding.root, "Weather settings saved! Reload data to see changes.", Snackbar.LENGTH_LONG).show()
-            
-        } catch (e: NumberFormatException) {
-            Snackbar.make(binding.root, "Please enter valid coordinates", Snackbar.LENGTH_SHORT).show()
-        }
+        Snackbar.make(binding.root, "Weather settings saved! Reload data to see changes.", Snackbar.LENGTH_LONG).show()
     }
 
     override fun onDestroyView() {
