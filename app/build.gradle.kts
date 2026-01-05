@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.energy20"
         minSdk = 24
         targetSdk = 34
-        versionCode = 20
-        versionName = "2.2.1"
+        versionCode = 21
+        versionName = "2.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

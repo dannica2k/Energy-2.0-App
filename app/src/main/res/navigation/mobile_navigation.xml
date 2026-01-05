@@ -12,6 +12,12 @@
         tools:layout="@layout/fragment_home" />
 
     <fragment
+        android:id="@+id/nav_devices"
+        android:name="com.example.energy20.ui.devices.DeviceManagementFragment"
+        android:label="Device Management"
+        tools:layout="@layout/fragment_device_management" />
+
+    <fragment
         android:id="@+id/nav_settings"
         android:name="com.example.energy20.ui.settings.SettingsFragment"
         android:label="Settings"
