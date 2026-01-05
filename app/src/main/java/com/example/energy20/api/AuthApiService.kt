@@ -169,6 +169,40 @@ class AuthApiService(context: Context) {
     }
     
     /**
+     * Set active device for user
+     */
+    suspend fun setActiveDevice(deviceId: String): Result<SetActiveDeviceResponse> = withContext(Dispatchers.IO) {
+        try {
+            val json = gson.toJson(mapOf("device_id" to deviceId))
+            val body = json.toRequestBody("application/json".toMediaType())
+            
+            val request = Request.Builder()
+                .url("$baseUrl/set_active_device.php")
+                .post(body)
+                .build()
+            
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string()
+            
+            if (response.isSuccessful && responseBody != null) {
+                val setActiveResponse = gson.fromJson(responseBody, SetActiveDeviceResponse::class.java)
+                Result.success(setActiveResponse)
+            } else {
+                val error = try {
+                    gson.fromJson(responseBody, ApiError::class.java)
+                } catch (e: Exception) {
+                    ApiError("Failed to set active device", "HTTP ${response.code}")
+                }
+                Result.failure(Exception(error.message ?: error.error))
+            }
+        } catch (e: IOException) {
+            Result.failure(Exception("Network error: ${e.message}"))
+        } catch (e: Exception) {
+            Result.failure(Exception("Set active device error: ${e.message}"))
+        }
+    }
+    
+    /**
      * Debug authentication - returns detailed diagnostic information
      * This helps diagnose authorization header issues
      */

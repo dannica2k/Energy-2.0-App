@@ -63,6 +63,7 @@ try {
     $userStmt->close();
     
     // Get user's devices with additional info
+    // Optimized query - removed slow correlated subqueries for data_count and last_data_date
     // Note: GROUP BY ensures only one row per device (device_settings has multiple rows per device for circuits)
     $devicesStmt = $conn->prepare(
         "SELECT 
@@ -70,13 +71,12 @@ try {
             COALESCE(MAX(ds.device_name), CONCAT('Device ', ud.device_id)) as device_name,
             MAX(ds.timezone_id) as timezone_id,
             ud.added_at,
-            (SELECT COUNT(*) FROM daily_energy de WHERE de.device_id = ud.device_id) as data_count,
-            (SELECT MAX(LocalTS) FROM daily_energy de WHERE de.device_id = ud.device_id) as last_data_date
+            ud.is_active
          FROM user_devices ud
          LEFT JOIN device_settings ds ON ud.device_id = ds.device_id
          WHERE ud.user_id = ?
-         GROUP BY ud.device_id, ud.added_at
-         ORDER BY ud.added_at DESC"
+         GROUP BY ud.device_id, ud.added_at, ud.is_active
+         ORDER BY ud.is_active DESC, ud.added_at DESC"
     );
     
     if (!$devicesStmt) {
@@ -94,8 +94,7 @@ try {
             'device_name' => $row['device_name'],
             'timezone_id' => $row['timezone_id'],
             'added_at' => $row['added_at'],
-            'data_count' => (int)$row['data_count'],
-            'last_data_date' => $row['last_data_date']
+            'is_active' => (bool)$row['is_active']
         ];
     }
     

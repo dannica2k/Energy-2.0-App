@@ -38,12 +38,10 @@ data class UserDevice(
     val deviceName: String,
     @SerializedName("added_at")
     val addedAt: String,
+    @SerializedName("is_active")
+    val isActive: Boolean = false,
     @SerializedName("timezone_id")
-    val timezoneId: String? = null,
-    @SerializedName("data_count")
-    val dataCount: Int? = null,
-    @SerializedName("last_data_date")
-    val lastDataDate: String? = null
+    val timezoneId: String? = null
 )
 
 /**
@@ -77,6 +75,17 @@ data class RemoveDeviceResponse(
     val devices: List<UserDevice>,
     @SerializedName("device_count")
     val deviceCount: Int
+)
+
+/**
+ * Set active device response
+ */
+data class SetActiveDeviceResponse(
+    val success: Boolean,
+    val message: String,
+    @SerializedName("device_id")
+    val deviceId: String,
+    val devices: List<UserDevice>
 )
 
 /**

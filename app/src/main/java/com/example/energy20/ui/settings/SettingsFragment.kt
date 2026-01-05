@@ -99,9 +99,14 @@ class SettingsFragment : Fragment() {
     
     private fun setupUI() {
         // Setup RecyclerView
-        deviceAdapter = DeviceListAdapter { device ->
-            showDeleteConfirmation(device)
-        }
+        deviceAdapter = DeviceListAdapter(
+            onDeleteClick = { device ->
+                showDeleteConfirmation(device)
+            },
+            onSetActiveClick = { device, viewHolder ->
+                setActiveDevice(device, viewHolder)
+            }
+        )
         binding.devicesRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = deviceAdapter
@@ -117,12 +122,6 @@ class SettingsFragment : Fragment() {
         
         binding.addDeviceButton.setOnClickListener {
             addDevice()
-        }
-        
-        // Debug button - temporary for diagnosing auth issues
-        binding.deviceIdInput.setOnLongClickListener {
-            debugAuth()
-            true
         }
     }
 
@@ -157,9 +156,8 @@ class SettingsFragment : Fragment() {
         devices.forEachIndexed { index, device ->
             android.util.Log.d("SettingsFragment", "Device $index: ${device.deviceId} - ${device.deviceName}")
             android.util.Log.d("SettingsFragment", "  Added: ${device.addedAt}")
+            android.util.Log.d("SettingsFragment", "  Active: ${device.isActive}")
             android.util.Log.d("SettingsFragment", "  Timezone: ${device.timezoneId}")
-            android.util.Log.d("SettingsFragment", "  Data count: ${device.dataCount}")
-            android.util.Log.d("SettingsFragment", "  Last data: ${device.lastDataDate}")
         }
         
         deviceAdapter.submitList(devices)
@@ -171,6 +169,44 @@ class SettingsFragment : Fragment() {
         } else {
             binding.devicesRecyclerView.visibility = View.VISIBLE
             binding.emptyDevicesText.visibility = View.GONE
+            
+            // Calculate and set proper height for RecyclerView
+            setRecyclerViewHeight(devices.size)
+        }
+    }
+    
+    /**
+     * Dynamically set RecyclerView height based on number of items
+     * This ensures all items are visible when RecyclerView is inside a ScrollView
+     */
+    private fun setRecyclerViewHeight(itemCount: Int) {
+        binding.devicesRecyclerView.post {
+            // Measure a single item to get its height
+            val itemView = binding.devicesRecyclerView.layoutManager?.findViewByPosition(0)
+            
+            if (itemView != null) {
+                // Use actual measured height of first item
+                val itemHeight = itemView.height
+                val totalHeight = itemHeight * itemCount
+                
+                android.util.Log.d("SettingsFragment", "Setting RecyclerView height: itemHeight=$itemHeight, itemCount=$itemCount, totalHeight=$totalHeight")
+                
+                val params = binding.devicesRecyclerView.layoutParams
+                params.height = totalHeight
+                binding.devicesRecyclerView.layoutParams = params
+            } else {
+                // Fallback: estimate item height (card with padding + margins)
+                // Each item_device.xml has: card with 16dp padding + 8dp bottom margin
+                val density = resources.displayMetrics.density
+                val estimatedItemHeight = (80 * density).toInt() // Approximate height in pixels
+                val totalHeight = estimatedItemHeight * itemCount
+                
+                android.util.Log.d("SettingsFragment", "Using estimated height: estimatedItemHeight=$estimatedItemHeight, itemCount=$itemCount, totalHeight=$totalHeight")
+                
+                val params = binding.devicesRecyclerView.layoutParams
+                params.height = totalHeight
+                binding.devicesRecyclerView.layoutParams = params
+            }
         }
     }
     
@@ -211,6 +247,50 @@ class SettingsFragment : Fragment() {
                     ).show()
                 }
             } catch (e: Exception) {
+                Snackbar.make(
+                    binding.root,
+                    "Error: ${e.message}",
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
+    private fun setActiveDevice(device: UserDevice, viewHolder: DeviceListAdapter.DeviceViewHolder) {
+        // Show loading state immediately
+        viewHolder.showLoading()
+        
+        lifecycleScope.launch {
+            try {
+                val result = authApiService.setActiveDevice(device.deviceId)
+                
+                result.onSuccess { response ->
+                    // Update local storage with new device list
+                    authManager.updateDevices(response.devices)
+                    
+                    // Reload devices list to show updated active status
+                    loadDevices()
+                    
+                    Snackbar.make(
+                        binding.root,
+                        "${device.deviceName} is now the active device",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                    
+                }.onFailure { error ->
+                    // Reset button on failure
+                    viewHolder.resetButton()
+                    
+                    Snackbar.make(
+                        binding.root,
+                        "Failed to set active device: ${error.message}",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+            } catch (e: Exception) {
+                // Reset button on error
+                viewHolder.resetButton()
+                
                 Snackbar.make(
                     binding.root,
                     "Error: ${e.message}",
