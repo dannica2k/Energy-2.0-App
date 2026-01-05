@@ -56,16 +56,15 @@
         </LinearLayout>
 
         <!-- Delete Button -->
-        <com.google.android.material.button.MaterialButton
+        <ImageButton
             android:id="@+id/deleteButton"
-            style="@style/Widget.Material3.Button.IconButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:contentDescription="Remove device"
-            app:icon="@android:drawable/ic_menu_delete"
-            app:iconTint="?attr/colorError"
-            app:iconGravity="textStart" />
+            android:src="@android:drawable/ic_menu_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#D32F2F" />
 
     </LinearLayout>
 

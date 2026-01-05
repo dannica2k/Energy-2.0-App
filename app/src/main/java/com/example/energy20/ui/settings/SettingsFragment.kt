@@ -119,10 +119,9 @@ class SettingsFragment : Fragment() {
             addDevice()
         }
         
-        // Manual refresh button - long press device ID input to refresh from server
+        // Debug button - temporary for diagnosing auth issues
         binding.deviceIdInput.setOnLongClickListener {
-            refreshDevicesFromServer()
-            Snackbar.make(binding.root, "Refreshing devices from server...", Snackbar.LENGTH_SHORT).show()
+            debugAuth()
             true
         }
     }
